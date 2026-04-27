@@ -33,26 +33,36 @@ overflow-x:hidden;
 .profile-btn img{width:100%;height:100%;object-fit:cover}
 .panel{border:1px solid var(--line);background:var(--card);border-radius:30px;padding:22px;margin-bottom:18px;box-shadow:0 24px 70px rgba(0,0,0,.35);backdrop-filter:blur(18px)}
 .hero{text-align:center}
-.radar-wrap{width:220px;height:220px;margin:8px auto 18px;display:grid;place-items:center}
-.radar{width:205px;height:205px;border-radius:50%;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.18);background:radial-gradient(circle,rgba(255,140,66,.9) 0 5px,transparent 6px),repeating-radial-gradient(circle,transparent 0 30px,rgba(255,255,255,.14) 31px 32px),conic-gradient(from 0deg,rgba(255,140,66,.35),transparent 35%,transparent);box-shadow:0 0 35px var(--glow),inset 0 0 40px rgba(255,140,66,.12)}
+.radar-wrap{width:180px;height:180px;margin:4px auto 14px;display:grid;place-items:center}
+.radar{width:170px;height:170px;border-radius:50%;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.18);background:radial-gradient(circle,rgba(255,140,66,.9) 0 5px,transparent 6px),repeating-radial-gradient(circle,transparent 0 26px,rgba(255,255,255,.14) 27px 28px),conic-gradient(from 0deg,rgba(255,140,66,.35),transparent 35%,transparent);box-shadow:0 0 35px var(--glow),inset 0 0 40px rgba(255,140,66,.12)}
 .radar:before{content:"";position:absolute;inset:50% 0 0 50%;background:linear-gradient(45deg,rgba(255,140,66,.8),transparent 65%);transform-origin:left top;animation:scan 2.6s linear infinite}
 .radar:after{content:"";position:absolute;inset:18px;border-radius:50%;border:1px dashed rgba(255,255,255,.24);animation:pulse 2s ease-in-out infinite}
-.status-pill{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);padding:10px 14px;border-radius:999px;font-family:Orbitron;font-size:13px;font-weight:800}
+.status-pill{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);padding:10px 14px;border-radius:999px;font-family:Orbitron;font-size:12px;font-weight:800}
 .dot{width:10px;height:10px;background:#ef4444;border-radius:50%;box-shadow:0 0 14px #ef4444}
 .dot.ok{background:#22c55e;box-shadow:0 0 14px #22c55e}
-.distance{font-family:Orbitron;font-size:40px;font-weight:800;margin-top:14px;color:var(--deep-orange);text-shadow:0 0 22px var(--glow)}
-.sub{color:var(--muted);margin-top:6px;font-size:14px}
+.distance{font-family:Orbitron;font-size:30px;font-weight:800;margin-top:12px;color:var(--deep-orange);text-shadow:0 0 22px var(--glow)}
+.sub{color:var(--muted);margin-top:6px;font-size:13px}
 .chat-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px}
 .chat-title{font-family:Orbitron;font-size:19px;font-weight:800}
 .badges{display:flex;gap:8px;align-items:center}
 .badge{padding:8px 11px;border-radius:999px;background:rgba(255,140,66,.16);color:var(--deep-orange);font-size:12px;font-weight:800;white-space:nowrap}
 .online-badge{background:rgba(34,197,94,.14);color:#22c55e}
+.settings-row{display:flex;gap:8px;margin-bottom:14px}
+.toggle-btn{flex:1;border:1px solid var(--line);background:var(--bubble);color:var(--text);border-radius:16px;padding:10px;font-weight:800;cursor:pointer}
+.toggle-btn.active{background:rgba(255,140,66,.18);color:var(--deep-orange)}
 #locked{text-align:center;color:var(--muted);padding:28px 8px;font-weight:600}
 #chat{display:none}
-#messages{display:flex;flex-direction:column;gap:10px;max-height:360px;overflow-y:auto;padding-right:4px;margin-bottom:15px}
-.message{display:flex;gap:10px;background:var(--bubble);border:1px solid var(--line);padding:13px 14px;border-radius:18px;animation:pop .25s ease;word-break:break-word}
-.msg-avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;flex:none;background:linear-gradient(135deg,var(--deep-orange),var(--blue));display:grid;place-items:center;font-size:14px;font-weight:800;overflow:hidden}
-.name{color:var(--orange);font-weight:800;font-size:12px;margin-bottom:5px;font-family:Orbitron}
+#messages{display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto;padding-right:4px;margin-bottom:15px}
+.message-row{display:flex;gap:8px;align-items:flex-end;max-width:88%;animation:pop .25s ease}
+.message-row.other{align-self:flex-start}
+.message-row.me{align-self:flex-end;flex-direction:row-reverse}
+.msg-avatar{width:34px;height:34px;border-radius:50%;flex:none;background:linear-gradient(135deg,var(--deep-orange),var(--blue));display:grid;place-items:center;font-size:13px;font-weight:800;overflow:hidden}
+.msg-avatar img{width:100%;height:100%;object-fit:cover}
+.message-bubble{padding:11px 13px;border-radius:18px;word-break:break-word;border:1px solid var(--line)}
+.message-row.other .message-bubble{background:var(--bubble);border-bottom-left-radius:6px}
+.message-row.me .message-bubble{background:linear-gradient(135deg,var(--deep-orange),var(--orange));color:white;border-bottom-right-radius:6px;border:none}
+.name{color:var(--orange);font-weight:800;font-size:11px;margin-bottom:4px;font-family:Orbitron}
+.message-row.me .name{color:white;opacity:.9}
 .text{line-height:1.45;font-size:15px}
 .input-row{display:flex;gap:10px}
 input{flex:1;border:1px solid var(--line);background:rgba(255,255,255,.07);color:var(--text);padding:15px 16px;border-radius:18px;outline:none;font-size:16px;min-width:0}
@@ -101,6 +111,11 @@ body.light input{background:rgba(255,255,255,.8)}
 <div class="badge online-badge" id="onlineBadge">👥 0</div>
 <div class="badge" id="chatBadge">LOCKED</div>
 </div>
+</div>
+
+<div class="settings-row">
+<button class="toggle-btn" id="soundBtn" onclick="toggleSound()">🔔 Suono</button>
+<button class="toggle-btn" id="vibrationBtn" onclick="toggleVibration()">📳 Vibrazione</button>
 </div>
 
 <div id="locked">🔒 Accesso consentito solo dentro l’area.</div>
@@ -155,7 +170,8 @@ const centerLng=15.047397231044794;
 const radius=15;
 
 let inside=false;
-let lastPresenceInside=null;
+let firstSnapshot=true;
+let lastMessageTime=0;
 
 let userId=localStorage.getItem("geochat_user_id");
 if(!userId){
@@ -168,8 +184,57 @@ name:localStorage.getItem("geochat_name")||"",
 avatar:localStorage.getItem("geochat_avatar")||""
 };
 
+let soundEnabled=localStorage.getItem("geochat_sound")==="true";
+let vibrationEnabled=localStorage.getItem("geochat_vibration")==="true";
+
 const nicknameInput=document.getElementById("nickname");
 nicknameInput.value=profile.name;
+
+function refreshSettingsUI(){
+document.getElementById("soundBtn").classList.toggle("active",soundEnabled);
+document.getElementById("vibrationBtn").classList.toggle("active",vibrationEnabled);
+document.getElementById("soundBtn").innerText=soundEnabled?"🔔 Suono ON":"🔕 Suono OFF";
+document.getElementById("vibrationBtn").innerText=vibrationEnabled?"📳 Vibrazione ON":"📴 Vibrazione OFF";
+}
+
+window.toggleSound=function(){
+soundEnabled=!soundEnabled;
+localStorage.setItem("geochat_sound",soundEnabled);
+refreshSettingsUI();
+if(soundEnabled) playNotifySound();
+};
+
+window.toggleVibration=function(){
+vibrationEnabled=!vibrationEnabled;
+localStorage.setItem("geochat_vibration",vibrationEnabled);
+refreshSettingsUI();
+if(vibrationEnabled && navigator.vibrate) navigator.vibrate(80);
+};
+
+function playNotifySound(){
+try{
+const AudioContext=window.AudioContext||window.webkitAudioContext;
+const ctx=new AudioContext();
+const oscillator=ctx.createOscillator();
+const gain=ctx.createGain();
+
+oscillator.type="sine";
+oscillator.frequency.setValueAtTime(880,ctx.currentTime);
+gain.gain.setValueAtTime(0.0001,ctx.currentTime);
+gain.gain.exponentialRampToValueAtTime(0.18,ctx.currentTime+0.02);
+gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.18);
+
+oscillator.connect(gain);
+gain.connect(ctx.destination);
+oscillator.start();
+oscillator.stop(ctx.currentTime+0.2);
+}catch(e){}
+}
+
+function notifyNewMessage(){
+if(soundEnabled) playNotifySound();
+if(vibrationEnabled && navigator.vibrate) navigator.vibrate([80,40,80]);
+}
 
 function refreshProfileUI(){
 const btn=document.getElementById("profileBtn");
@@ -287,7 +352,6 @@ name:profile.name||"",
 inside:inside,
 lastSeen:Date.now()
 });
-lastPresenceInside=inside;
 }catch(e){
 console.log("presence error",e);
 }
@@ -319,6 +383,7 @@ await addDoc(collection(db,"messages"),{
 text:msg,
 name:profile.name,
 avatar:profile.avatar||"",
+userId:userId,
 time:Date.now()
 });
 
@@ -331,27 +396,53 @@ onSnapshot(messagesQuery,(snapshot)=>{
 const container=document.getElementById("messages");
 container.innerHTML="";
 
+let newestOtherMessageTime=lastMessageTime;
+
 snapshot.forEach(doc=>{
 const data=doc.data();
 const safeName=escapeHtml(data.name||"Utente");
 const safeText=escapeHtml(data.text||"");
 const avatar=data.avatar||"";
+const isMe=data.userId===userId;
+
+if(!isMe && data.time && data.time>newestOtherMessageTime){
+newestOtherMessageTime=data.time;
+}
+
+if(data.time && data.time>lastMessageTime){
+lastMessageTime=data.time;
+}
 
 const div=document.createElement("div");
-div.className="message";
+div.className=isMe?"message-row me":"message-row other";
+
 div.innerHTML=`
 <div class="msg-avatar">
-${avatar?`<img src="${avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`:safeName[0].toUpperCase()}
+${avatar?`<img src="${avatar}">`:safeName[0].toUpperCase()}
 </div>
-<div>
-<div class="name">${safeName}</div>
+<div class="message-bubble">
+<div class="name">${isMe?"TU":safeName}</div>
 <div class="text">${safeText}</div>
 </div>
 `;
+
 container.appendChild(div);
 });
 
 container.scrollTop=container.scrollHeight;
+
+if(firstSnapshot){
+firstSnapshot=false;
+}else{
+let hasNewOther=false;
+snapshot.docChanges().forEach(change=>{
+const data=change.doc.data();
+if(change.type==="added" && data.userId!==userId){
+hasNewOther=true;
+}
+});
+if(hasNewOther) notifyNewMessage();
+}
 });
 
 const presenceQuery=query(collection(db,"presence"),where("inside","==",true));
@@ -377,6 +468,7 @@ return div.innerHTML;
 }
 
 refreshProfileUI();
+refreshSettingsUI();
 
 if(!profile.name){
 setTimeout(()=>openProfile(),500);
