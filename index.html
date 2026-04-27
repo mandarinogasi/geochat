@@ -67,9 +67,10 @@ overflow-x:hidden;
 .input-row{display:flex;gap:10px}
 input{flex:1;border:1px solid var(--line);background:rgba(255,255,255,.07);color:var(--text);padding:15px 16px;border-radius:18px;outline:none;font-size:16px;min-width:0}
 body.light input{background:rgba(255,255,255,.8)}
-.send-btn,.save-btn{border:none;border-radius:18px;background:linear-gradient(135deg,var(--deep-orange),var(--orange));color:white;cursor:pointer;font-weight:800}
+.send-btn,.save-btn,.auth-btn{border:none;border-radius:18px;background:linear-gradient(135deg,var(--deep-orange),var(--orange));color:white;cursor:pointer;font-weight:800}
 .send-btn{width:54px;font-size:22px;box-shadow:0 0 26px var(--glow)}
-.save-btn{padding:14px;width:100%;margin-top:12px}
+.save-btn,.auth-btn{padding:14px;width:100%;margin-top:12px}
+.ghost-btn{border:1px solid var(--line);background:transparent;color:var(--text);border-radius:18px;padding:12px 14px;font-weight:800;width:100%;margin-top:10px}
 .footer{text-align:center;font-size:12px;color:var(--muted);margin-top:20px}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:99;padding:20px}
 .modal-card{width:100%;max-width:430px;background:var(--card);border:1px solid var(--line);border-radius:30px;padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.55);text-align:center}
@@ -79,6 +80,13 @@ body.light input{background:rgba(255,255,255,.8)}
 .big-avatar img{width:100%;height:100%;object-fit:cover}
 .photo-btn{border:1px solid var(--line);background:transparent;color:var(--text);border-radius:18px;padding:12px 14px;font-weight:800;margin-bottom:12px}
 .close-btn{margin-top:10px;background:transparent;color:var(--muted);border:none;font-weight:700}
+#authScreen{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:22px}
+.auth-card{width:100%;max-width:430px;background:var(--card);border:1px solid var(--line);border-radius:30px;padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.55);text-align:center}
+.auth-title{font-family:Orbitron;font-size:26px;font-weight:800;margin-bottom:8px}
+.auth-sub{color:var(--muted);font-size:14px;margin-bottom:18px}
+.auth-row{display:flex;gap:10px}
+.auth-row button{flex:1}
+.logout-btn{font-size:11px;padding:7px 9px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted)}
 @keyframes scan{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 @keyframes pulse{0%,100%{transform:scale(.96);opacity:.5}50%{transform:scale(1.05);opacity:1}}
 @keyframes pop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
@@ -88,10 +96,30 @@ body.light input{background:rgba(255,255,255,.8)}
 <body>
 <div class="grid-bg"></div>
 
+<div id="authScreen">
+  <div class="auth-card">
+    <div class="auth-title">GeoChat</div>
+    <div class="auth-sub">Accedi o crea un account per entrare nella zona.</div>
+
+    <input id="authEmail" type="email" placeholder="Email" />
+    <br><br>
+    <input id="authPassword" type="password" placeholder="Password" />
+
+    <div class="auth-row">
+      <button class="auth-btn" onclick="loginEmail()">Login</button>
+      <button class="auth-btn" onclick="registerEmail()">Registrati</button>
+    </div>
+
+    <button class="ghost-btn" onclick="loginGoogle()">Continua con Google</button>
+    <div class="auth-sub" id="authError" style="margin-top:14px;color:#FF8C42"></div>
+  </div>
+</div>
+
 <div class="app">
 <div class="topbar">
 <div class="brand"><div class="brand-icon">📡</div>GeoChat</div>
 <div class="top-actions">
+<button class="logout-btn" onclick="logout()">Logout</button>
 <button class="profile-btn" onclick="openProfile()" id="profileBtn">?</button>
 <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">☀️</button>
 </div>
@@ -151,7 +179,13 @@ body.light input{background:rgba(255,255,255,.8)}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, setDoc, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { 
+  getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, setDoc, where, getDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import {
+  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig={
 apiKey:"AIzaSyD7cztFTFUz_zSiGeBbibzERV14KpKNhQw",
@@ -164,31 +198,101 @@ appId:"1:663629006541:web:0fda395d92f15fb7c4cb84"
 
 const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
+const auth=getAuth(app);
+const provider=new GoogleAuthProvider();
 
 const centerLat=40.61581525171119;
 const centerLng=15.047397231044794;
 const radius=15;
 
+let currentUser=null;
+let userId=null;
 let inside=false;
 let firstSnapshot=true;
-let lastMessageTime=0;
 
-let userId=localStorage.getItem("geochat_user_id");
-if(!userId){
-userId="user_"+Date.now()+"_"+Math.floor(Math.random()*999999);
-localStorage.setItem("geochat_user_id",userId);
-}
-
-let profile={
-name:localStorage.getItem("geochat_name")||"",
-avatar:localStorage.getItem("geochat_avatar")||""
-};
+let profile={name:"",avatar:""};
+let unsubscribeMessages=null;
+let unsubscribePresence=null;
 
 let soundEnabled=localStorage.getItem("geochat_sound")==="true";
 let vibrationEnabled=localStorage.getItem("geochat_vibration")==="true";
 
 const nicknameInput=document.getElementById("nickname");
-nicknameInput.value=profile.name;
+
+window.loginEmail=async function(){
+try{
+clearAuthError();
+const email=document.getElementById("authEmail").value.trim();
+const pass=document.getElementById("authPassword").value;
+await signInWithEmailAndPassword(auth,email,pass);
+}catch(e){showAuthError(e.message);}
+};
+
+window.registerEmail=async function(){
+try{
+clearAuthError();
+const email=document.getElementById("authEmail").value.trim();
+const pass=document.getElementById("authPassword").value;
+await createUserWithEmailAndPassword(auth,email,pass);
+}catch(e){showAuthError(e.message);}
+};
+
+window.loginGoogle=async function(){
+try{
+clearAuthError();
+await signInWithPopup(auth,provider);
+}catch(e){showAuthError(e.message);}
+};
+
+window.logout=async function(){
+inside=false;
+await updatePresence();
+await signOut(auth);
+location.reload();
+};
+
+function showAuthError(msg){
+document.getElementById("authError").innerText=msg;
+}
+function clearAuthError(){
+document.getElementById("authError").innerText="";
+}
+
+onAuthStateChanged(auth,async(user)=>{
+if(user){
+currentUser=user;
+userId=user.uid;
+document.getElementById("authScreen").style.display="none";
+await loadProfile();
+startListeners();
+updatePresence();
+}else{
+currentUser=null;
+userId=null;
+document.getElementById("authScreen").style.display="flex";
+}
+});
+
+async function loadProfile(){
+const ref=doc(db,"profiles",userId);
+const snap=await getDoc(ref);
+
+if(snap.exists()){
+profile=snap.data();
+}else{
+profile={
+name: currentUser.displayName || "",
+avatar: currentUser.photoURL || ""
+};
+}
+
+nicknameInput.value=profile.name||"";
+refreshProfileUI();
+
+if(!profile.name){
+setTimeout(()=>openProfile(),500);
+}
+}
 
 function refreshSettingsUI(){
 document.getElementById("soundBtn").classList.toggle("active",soundEnabled);
@@ -201,7 +305,6 @@ window.toggleSound=function(){
 soundEnabled=!soundEnabled;
 localStorage.setItem("geochat_sound",soundEnabled);
 refreshSettingsUI();
-if(soundEnabled) playNotifySound();
 };
 
 window.toggleVibration=function(){
@@ -217,13 +320,11 @@ const AudioContext=window.AudioContext||window.webkitAudioContext;
 const ctx=new AudioContext();
 const oscillator=ctx.createOscillator();
 const gain=ctx.createGain();
-
 oscillator.type="sine";
 oscillator.frequency.setValueAtTime(880,ctx.currentTime);
 gain.gain.setValueAtTime(0.0001,ctx.currentTime);
 gain.gain.exponentialRampToValueAtTime(0.18,ctx.currentTime+0.02);
 gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.18);
-
 oscillator.connect(gain);
 gain.connect(ctx.destination);
 oscillator.start();
@@ -251,7 +352,7 @@ big.innerText=letter;
 }
 
 window.openProfile=function(){
-nicknameInput.value=profile.name;
+nicknameInput.value=profile.name||"";
 refreshProfileUI();
 document.getElementById("profileModal").style.display="flex";
 };
@@ -268,9 +369,14 @@ if(name.length<2){
 alert("Scegli un nickname di almeno 2 caratteri");
 return;
 }
+
 profile.name=name;
-localStorage.setItem("geochat_name",profile.name);
-localStorage.setItem("geochat_avatar",profile.avatar||"");
+
+await setDoc(doc(db,"profiles",userId),{
+name:profile.name,
+avatar:profile.avatar||""
+});
+
 refreshProfileUI();
 document.getElementById("profileModal").style.display="none";
 await updatePresence();
@@ -346,15 +452,14 @@ return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 
 async function updatePresence(){
+if(!userId || !currentUser)return;
 try{
 await setDoc(doc(db,"presence",userId),{
 name:profile.name||"",
 inside:inside,
 lastSeen:Date.now()
 });
-}catch(e){
-console.log("presence error",e);
-}
+}catch(e){console.log("presence error",e);}
 }
 
 setInterval(updatePresence,15000);
@@ -368,6 +473,11 @@ navigator.geolocation.watchPosition(checkArea,gpsError,{enableHighAccuracy:true,
 
 window.sendMessage=async function(){
 if(!inside)return;
+
+if(!currentUser){
+alert("Devi fare login");
+return;
+}
 
 if(!profile.name){
 openProfile();
@@ -390,13 +500,15 @@ time:Date.now()
 input.value="";
 };
 
+function startListeners(){
+if(unsubscribeMessages) unsubscribeMessages();
+if(unsubscribePresence) unsubscribePresence();
+
 const messagesQuery=query(collection(db,"messages"),orderBy("time"));
 
-onSnapshot(messagesQuery,(snapshot)=>{
+unsubscribeMessages=onSnapshot(messagesQuery,(snapshot)=>{
 const container=document.getElementById("messages");
 container.innerHTML="";
-
-let newestOtherMessageTime=lastMessageTime;
 
 snapshot.forEach(doc=>{
 const data=doc.data();
@@ -404,14 +516,6 @@ const safeName=escapeHtml(data.name||"Utente");
 const safeText=escapeHtml(data.text||"");
 const avatar=data.avatar||"";
 const isMe=data.userId===userId;
-
-if(!isMe && data.time && data.time>newestOtherMessageTime){
-newestOtherMessageTime=data.time;
-}
-
-if(data.time && data.time>lastMessageTime){
-lastMessageTime=data.time;
-}
 
 const div=document.createElement("div");
 div.className=isMe?"message-row me":"message-row other";
@@ -447,7 +551,7 @@ if(hasNewOther) notifyNewMessage();
 
 const presenceQuery=query(collection(db,"presence"),where("inside","==",true));
 
-onSnapshot(presenceQuery,(snapshot)=>{
+unsubscribePresence=onSnapshot(presenceQuery,(snapshot)=>{
 const now=Date.now();
 let count=0;
 
@@ -460,6 +564,7 @@ count++;
 
 document.getElementById("onlineBadge").innerText="👥 "+count;
 });
+}
 
 function escapeHtml(text){
 const div=document.createElement("div");
@@ -467,12 +572,7 @@ div.innerText=text;
 return div.innerHTML;
 }
 
-refreshProfileUI();
 refreshSettingsUI();
-
-if(!profile.name){
-setTimeout(()=>openProfile(),500);
-}
 </script>
 
 <script>
