@@ -403,7 +403,7 @@
 
         <div class="input-row">
           <input id="message" placeholder="Trasmetti messaggio..." maxlength="300" />
-          <button class="send-btn" onclick="sendMessage()">➤</button>
+          <button class="send-btn" onclick="sendMessage()" ontouchstart="event.preventDefault()">➤</button>
         </div>
       </div>
     </div>
@@ -501,9 +501,11 @@
         time: Date.now()
       });
 
-      input.value = "";
-input.focus();
-    }
+  input.value = "";
+
+setTimeout(() => {
+  input.focus();
+}, 10);
 
     const q = query(collection(db, "messages"), orderBy("time"));
 
