@@ -9,541 +9,333 @@
 
   <style>
     :root {
-      --blue: #4E598C;
-      --white: #FFFFFF;
-      --cream: #F9C784;
-      --orange: #FCAF58;
-      --deep-orange: #FF8C42;
-
-      --bg: #070914;
-      --card: rgba(14, 18, 38, 0.88);
-      --text: #ffffff;
-      --muted: #aab2d5;
-      --line: rgba(255, 255, 255, 0.12);
-      --glow: rgba(255, 140, 66, 0.45);
-      --bubble: rgba(255, 255, 255, 0.08);
+      --blue:#4E598C; --cream:#F9C784; --orange:#FCAF58; --deep-orange:#FF8C42;
+      --bg:#070914; --card:rgba(14,18,38,.88); --text:#fff; --muted:#aab2d5;
+      --line:rgba(255,255,255,.12); --glow:rgba(255,140,66,.45); --bubble:rgba(255,255,255,.08);
     }
-
     body.light {
-      --bg: #f7f8ff;
-      --card: rgba(255, 255, 255, 0.92);
-      --text: #111827;
-      --muted: #596174;
-      --line: rgba(78, 89, 140, 0.18);
-      --glow: rgba(255, 140, 66, 0.28);
-      --bubble: rgba(78, 89, 140, 0.08);
+      --bg:#f7f8ff; --card:rgba(255,255,255,.92); --text:#111827; --muted:#596174;
+      --line:rgba(78,89,140,.18); --glow:rgba(255,140,66,.28); --bubble:rgba(78,89,140,.08);
     }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      font-family: Inter, Arial, sans-serif;
-      color: var(--text);
+    *{box-sizing:border-box}
+    body{
+      margin:0; min-height:100vh; font-family:Inter,Arial,sans-serif; color:var(--text);
       background:
-        radial-gradient(circle at 20% 5%, rgba(255, 140, 66, 0.25), transparent 30%),
-        radial-gradient(circle at 90% 20%, rgba(78, 89, 140, 0.45), transparent 35%),
-        radial-gradient(circle at 50% 100%, rgba(249, 199, 132, 0.12), transparent 35%),
+        radial-gradient(circle at 20% 5%,rgba(255,140,66,.25),transparent 30%),
+        radial-gradient(circle at 90% 20%,rgba(78,89,140,.45),transparent 35%),
         var(--bg);
-      transition: 0.3s ease;
-      overflow-x: hidden;
+      overflow-x:hidden;
     }
-
-    .grid-bg {
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(var(--line) 1px, transparent 1px),
-        linear-gradient(90deg, var(--line) 1px, transparent 1px);
-      background-size: 42px 42px;
-      mask-image: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
-      pointer-events: none;
+    .grid-bg{
+      position:fixed; inset:0;
+      background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+      background-size:42px 42px; pointer-events:none;
     }
-
-    .app {
-      width: 100%;
-      max-width: 500px;
-      min-height: 100vh;
-      margin: 0 auto;
-      padding: 22px;
-      position: relative;
-      z-index: 1;
-    }
-
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 18px;
-    }
-
-    .brand {
-      font-family: Orbitron, Inter, sans-serif;
-      font-size: 24px;
-      font-weight: 800;
-      letter-spacing: 1px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .brand-icon {
-      width: 38px;
-      height: 38px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, var(--deep-orange), var(--orange));
-      display: grid;
-      place-items: center;
-      box-shadow: 0 0 28px var(--glow);
-    }
-
-    .theme-btn {
-      border: 1px solid var(--line);
-      background: var(--card);
-      color: var(--text);
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      font-size: 18px;
-      cursor: pointer;
-      backdrop-filter: blur(14px);
-    }
-
-    .panel {
-      border: 1px solid var(--line);
-      background: var(--card);
-      border-radius: 30px;
-      padding: 22px;
-      margin-bottom: 18px;
-      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
-      backdrop-filter: blur(18px);
-      animation: enter 0.45s ease;
-    }
-
-    .hero {
-      text-align: center;
-      padding-top: 10px;
-    }
-
-    .radar-wrap {
-      width: 230px;
-      height: 230px;
-      margin: 8px auto 18px;
-      position: relative;
-      border-radius: 50%;
-      display: grid;
-      place-items: center;
-    }
-
-    .radar {
-      width: 210px;
-      height: 210px;
-      border-radius: 50%;
-      position: relative;
-      overflow: hidden;
-      border: 1px solid rgba(255,255,255,0.18);
-      background:
-        radial-gradient(circle, rgba(255,140,66,0.9) 0 5px, transparent 6px),
-        repeating-radial-gradient(circle, transparent 0 30px, rgba(255,255,255,0.14) 31px 32px),
-        conic-gradient(from 0deg, rgba(255,140,66,0.35), transparent 35%, transparent);
-      box-shadow:
-        0 0 35px var(--glow),
-        inset 0 0 40px rgba(255, 140, 66, 0.12);
-    }
-
-    .radar::before {
-      content: "";
-      position: absolute;
-      inset: 50% 0 0 50%;
-      background: linear-gradient(45deg, rgba(255,140,66,0.8), transparent 65%);
-      transform-origin: left top;
-      animation: scan 2.6s linear infinite;
-    }
-
-    .radar::after {
-      content: "";
-      position: absolute;
-      inset: 18px;
-      border-radius: 50%;
-      border: 1px dashed rgba(255,255,255,0.24);
-      animation: pulse 2s ease-in-out infinite;
-    }
-
-    .ping {
-      position: absolute;
-      width: 12px;
-      height: 12px;
-      background: var(--deep-orange);
-      border-radius: 50%;
-      box-shadow: 0 0 18px var(--deep-orange);
-      animation: blink 1.2s infinite;
-    }
-
-    .ping.one { top: 65px; left: 135px; }
-    .ping.two { top: 135px; left: 72px; animation-delay: 0.4s; }
-    .ping.three { top: 108px; left: 160px; animation-delay: 0.8s; }
-
-    .status-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 9px;
-      border: 1px solid var(--line);
-      padding: 10px 14px;
-      border-radius: 999px;
-      font-weight: 800;
-      font-family: Orbitron, Inter, sans-serif;
-      font-size: 13px;
-      letter-spacing: 0.8px;
-    }
-
-    .dot {
-      width: 10px;
-      height: 10px;
-      background: #ef4444;
-      border-radius: 50%;
-      box-shadow: 0 0 14px #ef4444;
-    }
-
-    .dot.ok {
-      background: #22c55e;
-      box-shadow: 0 0 14px #22c55e;
-    }
-
-    .distance {
-      font-family: Orbitron, Inter, sans-serif;
-      font-size: 42px;
-      font-weight: 800;
-      margin-top: 14px;
-      color: var(--deep-orange);
-      text-shadow: 0 0 22px var(--glow);
-    }
-
-    .sub {
-      color: var(--muted);
-      margin-top: 6px;
-      font-size: 14px;
-    }
-
-    .chat-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 14px;
-    }
-
-    .chat-title {
-      font-family: Orbitron, Inter, sans-serif;
-      font-size: 19px;
-      font-weight: 800;
-      letter-spacing: 0.8px;
-    }
-
-    .badge {
-      padding: 8px 11px;
-      border-radius: 999px;
-      background: rgba(255, 140, 66, 0.16);
-      color: var(--deep-orange);
-      font-size: 12px;
-      font-weight: 800;
-    }
-
-    #locked {
-      text-align: center;
-      color: var(--muted);
-      padding: 28px 8px;
-      font-weight: 600;
-    }
-
-    #chat { display: none; }
-
-    #messages {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      max-height: 360px;
-      overflow-y: auto;
-      padding-right: 4px;
-      margin-bottom: 15px;
-    }
-
-    .message {
-      background: var(--bubble);
-      border: 1px solid var(--line);
-      padding: 13px 14px;
-      border-radius: 18px;
-      animation: pop 0.25s ease;
-      word-break: break-word;
-    }
-
-    .name {
-      color: var(--orange);
-      font-weight: 800;
-      font-size: 12px;
-      margin-bottom: 5px;
-      font-family: Orbitron, Inter, sans-serif;
-    }
-
-    .text {
-      line-height: 1.45;
-      font-size: 15px;
-    }
-
-    .input-row {
-      display: flex;
-      gap: 10px;
-    }
-
-    input {
-      flex: 1;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.07);
-      color: var(--text);
-      padding: 15px 16px;
-      border-radius: 18px;
-      outline: none;
-      font-size: 16px;
-    }
-
-    body.light input {
-      background: rgba(255,255,255,0.8);
-    }
-
-    .send-btn {
-      width: 54px;
-      border: none;
-      border-radius: 18px;
-      background: linear-gradient(135deg, var(--deep-orange), var(--orange));
-      color: white;
-      font-size: 22px;
-      box-shadow: 0 0 26px var(--glow);
-      cursor: pointer;
-    }
-
-    .footer {
-      text-align: center;
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 20px;
-    }
-
-    @keyframes scan {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-
-    @keyframes pulse {
-      0%, 100% { transform: scale(0.96); opacity: 0.5; }
-      50% { transform: scale(1.05); opacity: 1; }
-    }
-
-    @keyframes blink {
-      0%, 100% { opacity: 0.35; transform: scale(0.8); }
-      50% { opacity: 1; transform: scale(1.25); }
-    }
-
-    @keyframes enter {
-      from { opacity: 0; transform: translateY(18px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes pop {
-      from { opacity: 0; transform: scale(0.96); }
-      to { opacity: 1; transform: scale(1); }
-    }
+    .app{max-width:500px; min-height:100vh; margin:0 auto; padding:22px; position:relative; z-index:1}
+    .topbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:18px}
+    .brand{font-family:Orbitron; font-size:24px; font-weight:800; display:flex; gap:10px; align-items:center}
+    .brand-icon{width:38px;height:38px;border-radius:14px;background:linear-gradient(135deg,var(--deep-orange),var(--orange));display:grid;place-items:center;box-shadow:0 0 28px var(--glow)}
+    .theme-btn{border:1px solid var(--line);background:var(--card);color:var(--text);width:44px;height:44px;border-radius:50%;font-size:18px;cursor:pointer}
+    .panel{border:1px solid var(--line);background:var(--card);border-radius:30px;padding:22px;margin-bottom:18px;box-shadow:0 24px 70px rgba(0,0,0,.35);backdrop-filter:blur(18px)}
+    .hero{text-align:center}
+    .radar-wrap{width:220px;height:220px;margin:8px auto 18px;display:grid;place-items:center}
+    .radar{width:205px;height:205px;border-radius:50%;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.18);background:radial-gradient(circle,rgba(255,140,66,.9) 0 5px,transparent 6px),repeating-radial-gradient(circle,transparent 0 30px,rgba(255,255,255,.14) 31px 32px),conic-gradient(from 0deg,rgba(255,140,66,.35),transparent 35%,transparent);box-shadow:0 0 35px var(--glow),inset 0 0 40px rgba(255,140,66,.12)}
+    .radar:before{content:"";position:absolute;inset:50% 0 0 50%;background:linear-gradient(45deg,rgba(255,140,66,.8),transparent 65%);transform-origin:left top;animation:scan 2.6s linear infinite}
+    .radar:after{content:"";position:absolute;inset:18px;border-radius:50%;border:1px dashed rgba(255,255,255,.24);animation:pulse 2s ease-in-out infinite}
+    .status-pill{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);padding:10px 14px;border-radius:999px;font-family:Orbitron;font-size:13px;font-weight:800}
+    .dot{width:10px;height:10px;background:#ef4444;border-radius:50%;box-shadow:0 0 14px #ef4444}
+    .dot.ok{background:#22c55e;box-shadow:0 0 14px #22c55e}
+    .distance{font-family:Orbitron;font-size:40px;font-weight:800;margin-top:14px;color:var(--deep-orange);text-shadow:0 0 22px var(--glow)}
+    .sub{color:var(--muted);margin-top:6px;font-size:14px}
+    .chat-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+    .chat-title{font-family:Orbitron;font-size:19px;font-weight:800}
+    .badge{padding:8px 11px;border-radius:999px;background:rgba(255,140,66,.16);color:var(--deep-orange);font-size:12px;font-weight:800}
+    #locked{text-align:center;color:var(--muted);padding:28px 8px;font-weight:600}
+    #chat{display:none}
+    #profileBox{display:none;margin-bottom:16px;padding:14px;border:1px solid var(--line);border-radius:20px;background:var(--bubble)}
+    .profile-row{display:flex;align-items:center;gap:12px}
+    .avatar-preview{width:48px;height:48px;border-radius:50%;object-fit:cover;background:linear-gradient(135deg,var(--deep-orange),var(--blue));display:grid;place-items:center;font-weight:800;overflow:hidden}
+    .profile-actions{display:flex;gap:8px;margin-top:10px}
+    #messages{display:flex;flex-direction:column;gap:10px;max-height:360px;overflow-y:auto;padding-right:4px;margin-bottom:15px}
+    .message{display:flex;gap:10px;background:var(--bubble);border:1px solid var(--line);padding:13px 14px;border-radius:18px;animation:pop .25s ease;word-break:break-word}
+    .msg-avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;flex:none;background:linear-gradient(135deg,var(--deep-orange),var(--blue));display:grid;place-items:center;font-size:14px;font-weight:800}
+    .name{color:var(--orange);font-weight:800;font-size:12px;margin-bottom:5px;font-family:Orbitron}
+    .text{line-height:1.45;font-size:15px}
+    .input-row{display:flex;gap:10px}
+    input{flex:1;border:1px solid var(--line);background:rgba(255,255,255,.07);color:var(--text);padding:15px 16px;border-radius:18px;outline:none;font-size:16px;min-width:0}
+    body.light input{background:rgba(255,255,255,.8)}
+    .send-btn,.small-btn{border:none;border-radius:18px;background:linear-gradient(135deg,var(--deep-orange),var(--orange));color:white;cursor:pointer}
+    .send-btn{width:54px;font-size:22px;box-shadow:0 0 26px var(--glow)}
+    .small-btn{padding:10px 12px;font-weight:700}
+    .ghost-btn{padding:10px 12px;border-radius:18px;border:1px solid var(--line);background:transparent;color:var(--text);font-weight:700}
+    .footer{text-align:center;font-size:12px;color:var(--muted);margin-top:20px}
+    @keyframes scan{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+    @keyframes pulse{0%,100%{transform:scale(.96);opacity:.5}50%{transform:scale(1.05);opacity:1}}
+    @keyframes pop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
   </style>
 </head>
 
 <body>
-  <div class="grid-bg"></div>
+<div class="grid-bg"></div>
 
-  <div class="app">
-    <div class="topbar">
-      <div class="brand">
-        <div class="brand-icon">📡</div>
-        GeoChat
-      </div>
-      <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">☀️</button>
+<div class="app">
+  <div class="topbar">
+    <div class="brand"><div class="brand-icon">📡</div>GeoChat</div>
+    <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">☀️</button>
+  </div>
+
+  <div class="panel hero">
+    <div class="radar-wrap"><div class="radar"></div></div>
+    <div class="status-pill"><span id="dot" class="dot"></span><span id="statusText">SCANSIONE AREA...</span></div>
+    <div class="distance" id="distanceText">-- m</div>
+    <div class="sub" id="subStatus">Attendi il segnale GPS</div>
+  </div>
+
+  <div class="panel">
+    <div class="chat-top">
+      <div class="chat-title">CHAT ZONA</div>
+      <div class="badge" id="chatBadge">LOCKED</div>
     </div>
 
-    <div class="panel hero">
-      <div class="radar-wrap">
-        <div class="radar">
-          <div class="ping one"></div>
-          <div class="ping two"></div>
-          <div class="ping three"></div>
+    <div id="locked">🔒 Accesso consentito solo dentro l’area.</div>
+
+    <div id="chat">
+      <div id="profileBox">
+        <div class="profile-row">
+          <div class="avatar-preview" id="avatarPreview">?</div>
+          <input id="nickname" placeholder="Il tuo nickname" maxlength="30" />
+        </div>
+        <div class="profile-actions">
+          <input type="file" id="avatarFile" accept="image/*" style="display:none" />
+          <button class="ghost-btn" onclick="document.getElementById('avatarFile').click()">Foto</button>
+          <button class="small-btn" onclick="saveProfile()">Salva profilo</button>
         </div>
       </div>
 
-      <div class="status-pill">
-        <span id="dot" class="dot"></span>
-        <span id="statusText">SCANSIONE AREA...</span>
+      <div id="messages"></div>
+
+      <div class="input-row">
+        <input id="message" placeholder="Trasmetti messaggio..." maxlength="300" />
+        <button class="send-btn" onclick="sendMessage()">➤</button>
       </div>
-
-      <div class="distance" id="distanceText">-- m</div>
-      <div class="sub" id="subStatus">Attendi il segnale GPS</div>
-    </div>
-
-    <div class="panel">
-      <div class="chat-top">
-        <div class="chat-title">CHAT ZONA</div>
-        <div class="badge" id="chatBadge">LOCKED</div>
-      </div>
-
-      <div id="locked">
-        🔒 Accesso consentito solo dentro l’area.
-      </div>
-
-      <div id="chat">
-        <div id="messages"></div>
-
-        <div class="input-row">
-          <input id="message" placeholder="Trasmetti messaggio..." maxlength="300" enterkeyhint="send" onkeydown="if(event.key === 'Enter'){ event.preventDefault(); sendMessage(); }" />
-          <button class="send-btn" onclick="sendMessage()">➤</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="footer">
-      GEOCHAT SYSTEM · POSITION BASED ACCESS
     </div>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } 
-    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  <div class="footer">GEOCHAT SYSTEM · POSITION BASED ACCESS</div>
+</div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyD7cztFTFUz_zSiGeBbibzERV14KpKNhQw",
-      authDomain: "geochat-51d5c.firebaseapp.com",
-      projectId: "geochat-51d5c",
-      storageBucket: "geochat-51d5c.firebasestorage.app",
-      messagingSenderId: "663629006541",
-      appId: "1:663629006541:web:0fda395d92f15fb7c4cb84"
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } 
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyD7cztFTFUz_zSiGeBbibzERV14KpKNhQw",
+    authDomain: "geochat-51d5c.firebaseapp.com",
+    projectId: "geochat-51d5c",
+    storageBucket: "geochat-51d5c.firebasestorage.app",
+    messagingSenderId: "663629006541",
+    appId: "1:663629006541:web:0fda395d92f15fb7c4cb84"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  const centerLat = 40.61581525171119;
+  const centerLng = 15.047397231044794;
+  const radius = 15;
+
+  let inside = false;
+  let profile = {
+    name: localStorage.getItem("geochat_name") || "",
+    avatar: localStorage.getItem("geochat_avatar") || ""
+  };
+
+  const nicknameInput = document.getElementById("nickname");
+  const avatarPreview = document.getElementById("avatarPreview");
+  nicknameInput.value = profile.name;
+  updateAvatarPreview();
+
+  if (!profile.name) {
+    document.getElementById("profileBox").style.display = "block";
+  }
+
+  document.getElementById("avatarFile").addEventListener("change", function () {
+    const file = this.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      resizeImage(e.target.result, 96, function (smallImage) {
+        profile.avatar = smallImage;
+        localStorage.setItem("geochat_avatar", profile.avatar);
+        updateAvatarPreview();
+      });
     };
+    reader.readAsDataURL(file);
+  });
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+  window.saveProfile = function () {
+    const name = nicknameInput.value.trim();
 
-    const centerLat = 40.61581525171119;
-    const centerLng = 15.047397231044794;
-    const radius = 15;
-
-    let inside = false;
-
-    function checkArea(position) {
-      const lat = position.coords.latitude;
-      const lng = position.coords.longitude;
-      const distance = getDistance(lat, lng, centerLat, centerLng);
-
-      document.getElementById("distanceText").innerText = distance.toFixed(2) + " m";
-
-      if (distance <= radius) {
-        inside = true;
-        document.getElementById("dot").classList.add("ok");
-        document.getElementById("statusText").innerText = "AREA SBLOCCATA";
-        document.getElementById("subStatus").innerText = "Sei dentro il perimetro";
-        document.getElementById("chat").style.display = "block";
-        document.getElementById("locked").style.display = "none";
-        document.getElementById("chatBadge").innerText = "LIVE";
-      } else {
-        inside = false;
-        document.getElementById("dot").classList.remove("ok");
-        document.getElementById("statusText").innerText = "FUORI AREA";
-        document.getElementById("subStatus").innerText = "Avvicinati alla zona attiva";
-        document.getElementById("chat").style.display = "none";
-        document.getElementById("locked").style.display = "block";
-        document.getElementById("chatBadge").innerText = "LOCKED";
-      }
+    if (name.length < 2) {
+      alert("Scegli un nickname di almeno 2 caratteri");
+      return;
     }
 
-    function gpsError(error) {
-      document.getElementById("statusText").innerText = "GPS OFFLINE";
-      document.getElementById("subStatus").innerText = "Controlla i permessi posizione";
+    profile.name = name;
+    localStorage.setItem("geochat_name", profile.name);
+    document.getElementById("profileBox").style.display = "none";
+  };
+
+  function updateAvatarPreview() {
+    if (profile.avatar) {
+      avatarPreview.innerHTML = `<img src="${profile.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    } else {
+      avatarPreview.innerText = profile.name ? profile.name[0].toUpperCase() : "?";
+    }
+  }
+
+  function resizeImage(src, size, callback) {
+    const img = new Image();
+    img.onload = function () {
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+
+      const minSide = Math.min(img.width, img.height);
+      const sx = (img.width - minSide) / 2;
+      const sy = (img.height - minSide) / 2;
+
+      ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+      callback(canvas.toDataURL("image/jpeg", 0.7));
+    };
+    img.src = src;
+  }
+
+  function checkArea(position) {
+    const lat = position.coords.latitude;
+    const lng = position.coords.longitude;
+    const distance = getDistance(lat, lng, centerLat, centerLng);
+
+    document.getElementById("distanceText").innerText = distance.toFixed(2) + " m";
+
+    if (distance <= radius) {
+      inside = true;
+      document.getElementById("dot").classList.add("ok");
+      document.getElementById("statusText").innerText = "AREA SBLOCCATA";
+      document.getElementById("subStatus").innerText = "Sei dentro il perimetro";
+      document.getElementById("chat").style.display = "block";
+      document.getElementById("locked").style.display = "none";
+      document.getElementById("chatBadge").innerText = "LIVE";
+    } else {
+      inside = false;
+      document.getElementById("dot").classList.remove("ok");
+      document.getElementById("statusText").innerText = "FUORI AREA";
+      document.getElementById("subStatus").innerText = "Avvicinati alla zona attiva";
+      document.getElementById("chat").style.display = "none";
+      document.getElementById("locked").style.display = "block";
+      document.getElementById("chatBadge").innerText = "LOCKED";
+    }
+  }
+
+  function gpsError() {
+    document.getElementById("statusText").innerText = "GPS OFFLINE";
+    document.getElementById("subStatus").innerText = "Controlla i permessi posizione";
+  }
+
+  function getDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI/180) *
+      Math.cos(lat2 * Math.PI/180) *
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
+  navigator.geolocation.watchPosition(checkArea, gpsError, {
+    enableHighAccuracy: true,
+    maximumAge: 3000,
+    timeout: 10000
+  });
+
+  window.sendMessage = async function () {
+    if (!inside) return;
+
+    if (!profile.name) {
+      document.getElementById("profileBox").style.display = "block";
+      alert("Prima scegli un nickname");
+      return;
     }
 
-    function getDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371000;
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
+    const input = document.getElementById("message");
+    const msg = input.value.trim();
+    if (msg === "") return;
 
-      const a =
-        Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(lat1 * Math.PI/180) *
-        Math.cos(lat2 * Math.PI/180) *
-        Math.sin(dLon/2) * Math.sin(dLon/2);
-
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      return R * c;
-    }
-
-    navigator.geolocation.watchPosition(checkArea, gpsError, {
-      enableHighAccuracy: true,
-      maximumAge: 3000,
-      timeout: 10000
+    await addDoc(collection(db, "messages"), {
+      text: msg,
+      name: profile.name,
+      avatar: profile.avatar || "",
+      time: Date.now()
     });
 
-    window.sendMessage = async function () {
-      if (!inside) return;
+    input.value = "";
+  };
 
-      const input = document.getElementById("message");
-      const msg = input.value.trim();
+  const q = query(collection(db, "messages"), orderBy("time"));
 
-      if (msg === "") return;
+  onSnapshot(q, (snapshot) => {
+    const container = document.getElementById("messages");
+    container.innerHTML = "";
 
-      await addDoc(collection(db, "messages"), {
-        text: msg,
-        time: Date.now()
-      });
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const safeName = escapeHtml(data.name || "Utente");
+      const safeText = escapeHtml(data.text || "");
+      const avatar = data.avatar || "";
 
-      input.value = "";
-
-      setTimeout(() => {
-        input.focus();
-      }, 10);
-    };
-
-    const q = query(collection(db, "messages"), orderBy("time"));
-
-    onSnapshot(q, (snapshot) => {
-      const container = document.getElementById("messages");
-      container.innerHTML = "";
-
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const div = document.createElement("div");
-        div.className = "message";
-        div.innerHTML = `
-          <div class="name">UTENTE</div>
-          <div class="text">${escapeHtml(data.text)}</div>
-        `;
-        container.appendChild(div);
-      });
-
-      container.scrollTop = container.scrollHeight;
-    });
-
-    function escapeHtml(text) {
       const div = document.createElement("div");
-      div.innerText = text;
-      return div.innerHTML;
-    }
-  </script>
+      div.className = "message";
 
-  <script>
-    function toggleTheme() {
-      document.body.classList.toggle("light");
+      div.innerHTML = `
+        <div class="msg-avatar">
+          ${avatar ? `<img src="${avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : safeName[0].toUpperCase()}
+        </div>
+        <div>
+          <div class="name">${safeName}</div>
+          <div class="text">${safeText}</div>
+        </div>
+      `;
 
-      const light = document.body.classList.contains("light");
-      localStorage.setItem("theme", light ? "light" : "dark");
-      document.getElementById("themeBtn").innerText = light ? "🌙" : "☀️";
-    }
+      container.appendChild(div);
+    });
 
-    if (localStorage.getItem("theme") === "light") {
-      document.body.classList.add("light");
-      document.getElementById("themeBtn").innerText = "🌙";
-    }
-  </script>
+    container.scrollTop = container.scrollHeight;
+  });
+
+  function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.innerText = text;
+    return div.innerHTML;
+  }
+</script>
+
+<script>
+  function toggleTheme() {
+    document.body.classList.toggle("light");
+    const light = document.body.classList.contains("light");
+    localStorage.setItem("theme", light ? "light" : "dark");
+    document.getElementById("themeBtn").innerText = light ? "🌙" : "☀️";
+  }
+
+  if (localStorage.getItem("theme") === "light") {
+    document.body.classList.add("light");
+    document.getElementById("themeBtn").innerText = "🌙";
+  }
+</script>
 </body>
 </html>
