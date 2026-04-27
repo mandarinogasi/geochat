@@ -56,7 +56,7 @@
 <body>
 
     <h1>📡 GeoChat</h1>
-    <p>Accesso solo dentro l’area</p>
+    <p>Chat attiva solo dentro area</p>
 
     <button onclick="getLocation()">Controlla posizione</button>
 
@@ -70,17 +70,32 @@
         <div id="messages"></div>
     </div>
 
-    <script>
+    <!-- FIREBASE -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } 
+        from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyD7cztFTFUz_zSiGeBbibzERV14KpKNhQw",
+          authDomain: "geochat-51d5c.firebaseapp.com",
+          projectId: "geochat-51d5c",
+          storageBucket: "geochat-51d5c.firebasestorage.app",
+          messagingSenderId: "663629006541",
+          appId: "1:663629006541:web:0fda395d92f15fb7c4cb84"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
         const centerLat = 40.61581525171119;
         const centerLng = 15.047397231044794;
         const radius = 15;
 
-        function getLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(checkArea, error);
-            } else {
-                document.getElementById("status").innerText = "GPS non supportato";
-            }
+        let inside = false;
+
+        window.getLocation = function () {
+            navigator.geolocation.getCurrentPosition(checkArea);
         }
 
         function checkArea(position) {
@@ -90,21 +105,16 @@
             const distance = getDistance(lat, lng, centerLat, centerLng);
 
             if (distance <= radius) {
+                inside = true;
                 document.getElementById("status").innerText =
-                    "✅ SEI DENTRO L'AREA (" + distance.toFixed(2) + "m)";
-                
+                    "✅ SEI DENTRO (" + distance.toFixed(2) + "m)";
                 document.getElementById("chat").style.display = "block";
             } else {
+                inside = false;
                 document.getElementById("status").innerText =
                     "❌ SEI FUORI (" + distance.toFixed(2) + "m)";
-                
                 document.getElementById("chat").style.display = "none";
             }
-        }
-
-        function error() {
-            document.getElementById("status").innerText =
-                "Errore nel prendere la posizione";
         }
 
         function getDistance(lat1, lon1, lat2, lon2) {
@@ -122,18 +132,32 @@
             return R * c;
         }
 
-        function sendMessage() {
-            const msg = document.getElementById("message").value;
+        window.sendMessage = async function () {
+            if (!inside) return;
 
+            const msg = document.getElementById("message").value;
             if (msg.trim() === "") return;
 
-            const div = document.createElement("div");
-            div.innerText = msg;
-
-            document.getElementById("messages").appendChild(div);
+            await addDoc(collection(db, "messages"), {
+                text: msg,
+                time: Date.now()
+            });
 
             document.getElementById("message").value = "";
         }
+
+        const q = query(collection(db, "messages"), orderBy("time"));
+
+        onSnapshot(q, (snapshot) => {
+            const container = document.getElementById("messages");
+            container.innerHTML = "";
+
+            snapshot.forEach(doc => {
+                const div = document.createElement("div");
+                div.innerText = doc.data().text;
+                container.appendChild(div);
+            });
+        });
     </script>
 
 </body>
