@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GeoChat Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <style>
+        body {
+            font-family: Arial;
+            text-align: center;
+            padding: 50px;
+            background: #111;
+            color: white;
+        }
+
+        button {
+            padding: 15px;
+            font-size: 18px;
+            background: #00ff99;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        #status {
+            margin-top: 20px;
+            font-size: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>📡 GeoChat</h1>
+    <p>Test posizione GPS</p>
+
+    <button onclick="getLocation()">Controlla posizione</button>
+
+    <div id="status">Premi il bottone</div>
+
+    <script>
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(success, error);
+            } else {
+                document.getElementById("status").innerText = "GPS non supportato";
+            }
+        }
+
+        function success(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+
+            document.getElementById("status").innerText =
+                "Lat: " + lat + " | Lng: " + lng;
+        }
+
+        function error() {
+            document.getElementById("status").innerText =
+                "Errore nel prendere la posizione";
+        }
+    </script>
+
+</body>
+</html>
