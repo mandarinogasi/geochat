@@ -96,6 +96,8 @@ body.light input{background:rgba(255,255,255,.8)}
 .admin-section{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
 .admin-label{font-size:12px;font-weight:800;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.7px}
 .admin-input{width:100%;min-height:72px;resize:vertical;border:1px solid var(--line);background:rgba(255,255,255,.07);color:var(--text);padding:12px;border-radius:16px;outline:none;font-size:14px;font-family:Inter,Arial,sans-serif}
+.admin-number{width:100%;border:1px solid var(--line);background:rgba(255,255,255,.07);color:var(--text);padding:12px;border-radius:16px;outline:none;font-size:14px;font-family:Inter,Arial,sans-serif}
+.admin-status{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4}
 .admin-user-list{display:flex;flex-direction:column;gap:8px;margin-top:10px;max-height:220px;overflow:auto}
 .admin-user{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bubble);border:1px solid var(--line);border-radius:16px;padding:10px}
 .admin-user-main{min-width:0;text-align:left}
@@ -198,6 +200,17 @@ body.light input{background:rgba(255,255,255,.8)}
 </div>
 
 <div class="admin-section">
+<div class="admin-label">🎛 Gestione area</div>
+<div class="admin-sub">Modifica il raggio e salva la tua posizione attuale come centro area.</div>
+<input class="admin-number" id="adminRadiusInput" type="number" min="1" step="1" placeholder="Raggio in metri" />
+<div class="admin-grid" style="margin-top:10px">
+<button class="admin-btn secondary" onclick="saveAdminRadius()">💾 Salva raggio</button>
+<button class="admin-btn" onclick="saveCurrentCenter()">📍 Usa mia posizione</button>
+</div>
+<div class="admin-status" id="areaAdminStatus">Area: caricamento...</div>
+</div>
+
+<div class="admin-section">
 <div class="admin-label">👥 Utenti online / ban</div>
 <div class="admin-sub">Puoi bannare o sbloccare utenti presenti nella zona.</div>
 <div class="admin-user-list" id="adminUsersList"></div>
@@ -252,9 +265,15 @@ let isAdmin=false;
 const notifyAudio=new Audio("notifica.mp3");
 notifyAudio.preload="auto";
 
-const centerLat=40.61581525171119;
-const centerLng=15.047397231044794;
-const radius=5000;
+const DEFAULT_CENTER_LAT=40.61581525171119;
+const DEFAULT_CENTER_LNG=15.047397231044794;
+const DEFAULT_RADIUS=15;
+
+let areaCenterLat=DEFAULT_CENTER_LAT;
+let areaCenterLng=DEFAULT_CENTER_LNG;
+let areaRadius=DEFAULT_RADIUS;
+let latestUserLat=null;
+let latestUserLng=null;
 
 let currentUser=null;
 let userId=null;
@@ -479,11 +498,13 @@ img.src=src;
 function checkArea(position){
 const lat=position.coords.latitude;
 const lng=position.coords.longitude;
-const distance=getDistance(lat,lng,centerLat,centerLng);
+latestUserLat=lat;
+latestUserLng=lng;
+const distance=getDistance(lat,lng,areaCenterLat,areaCenterLng);
 
 document.getElementById("distanceText").innerText=distance.toFixed(2)+" m";
 
-inside = distance <= radius;
+inside = distance <= areaRadius;
 renderAccessState();
 updatePresence();
 }
@@ -633,6 +654,42 @@ unbannedBy:userId
 },{merge:true});
 };
 
+window.saveAdminRadius=async function(){
+if(!isAdmin)return;
+const value=Number(document.getElementById("adminRadiusInput").value);
+if(!value || value<1){
+alert("Inserisci un raggio valido in metri");
+return;
+}
+await setDoc(doc(db,"appConfig","main"),{
+areaRadius:value,
+updatedAt:Date.now(),
+updatedBy:userId
+},{merge:true});
+};
+
+window.saveCurrentCenter=async function(){
+if(!isAdmin)return;
+if(latestUserLat===null || latestUserLng===null){
+alert("Aspetta che il GPS trovi la tua posizione");
+return;
+}
+if(!confirm("Impostare la tua posizione attuale come nuovo centro area?"))return;
+await setDoc(doc(db,"appConfig","main"),{
+areaCenterLat:latestUserLat,
+areaCenterLng:latestUserLng,
+updatedAt:Date.now(),
+updatedBy:userId
+},{merge:true});
+};
+
+function refreshAreaAdminUI(){
+const radiusInput=document.getElementById("adminRadiusInput");
+const status=document.getElementById("areaAdminStatus");
+if(radiusInput) radiusInput.value=areaRadius;
+if(status) status.innerText=`Area: raggio ${areaRadius}m · centro ${areaCenterLat.toFixed(6)}, ${areaCenterLng.toFixed(6)}`;
+}
+
 window.savePinnedMessage=async function(){
 if(!isAdmin)return;
 const text=document.getElementById("pinnedInput").value.trim();
@@ -687,6 +744,17 @@ if(unsubscribeBans) unsubscribeBans();
 
 unsubscribePinned=onSnapshot(doc(db,"appConfig","main"),(snap)=>{
 const data=snap.exists()?snap.data():{};
+if(typeof data.areaCenterLat==="number") areaCenterLat=data.areaCenterLat;
+if(typeof data.areaCenterLng==="number") areaCenterLng=data.areaCenterLng;
+if(typeof data.areaRadius==="number") areaRadius=data.areaRadius;
+refreshAreaAdminUI();
+if(latestUserLat!==null && latestUserLng!==null){
+const distance=getDistance(latestUserLat,latestUserLng,areaCenterLat,areaCenterLng);
+inside = distance <= areaRadius;
+document.getElementById("distanceText").innerText=distance.toFixed(2)+" m";
+renderAccessState();
+updatePresence();
+}
 const text=(data.pinnedText||"").trim();
 const banner=document.getElementById("pinnedBanner");
 if(text){
@@ -789,6 +857,7 @@ return div.innerHTML;
 }
 
 refreshSettingsUI();
+refreshAreaAdminUI();
 </script>
 
 <script>
