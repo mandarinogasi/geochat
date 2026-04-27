@@ -2,10 +2,10 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <title>GeoChat</title>
+  <title>GeoChat Pulse</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
     :root {
@@ -15,23 +15,23 @@
       --orange: #FCAF58;
       --deep-orange: #FF8C42;
 
-      --bg: #f7f7fb;
-      --card: #ffffff;
-      --text: #12172f;
-      --muted: #6b7280;
-      --border: rgba(78, 89, 140, 0.16);
-      --bubble: #ffffff;
-      --shadow: 0 18px 45px rgba(78, 89, 140, 0.18);
+      --bg: #070914;
+      --card: rgba(14, 18, 38, 0.88);
+      --text: #ffffff;
+      --muted: #aab2d5;
+      --line: rgba(255, 255, 255, 0.12);
+      --glow: rgba(255, 140, 66, 0.45);
+      --bubble: rgba(255, 255, 255, 0.08);
     }
 
-    body.dark {
-      --bg: #101426;
-      --card: #171c33;
-      --text: #ffffff;
-      --muted: #b7bfd8;
-      --border: rgba(255, 255, 255, 0.10);
-      --bubble: #202642;
-      --shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+    body.light {
+      --bg: #f7f8ff;
+      --card: rgba(255, 255, 255, 0.92);
+      --text: #111827;
+      --muted: #596174;
+      --line: rgba(78, 89, 140, 0.18);
+      --glow: rgba(255, 140, 66, 0.28);
+      --bubble: rgba(78, 89, 140, 0.08);
     }
 
     * {
@@ -40,191 +40,220 @@
 
     body {
       margin: 0;
-      font-family: Inter, Arial, sans-serif;
-      background:
-        radial-gradient(circle at top left, rgba(255, 140, 66, 0.22), transparent 35%),
-        radial-gradient(circle at bottom right, rgba(78, 89, 140, 0.22), transparent 35%),
-        var(--bg);
-      color: var(--text);
       min-height: 100vh;
+      font-family: Inter, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 20% 5%, rgba(255, 140, 66, 0.25), transparent 30%),
+        radial-gradient(circle at 90% 20%, rgba(78, 89, 140, 0.45), transparent 35%),
+        radial-gradient(circle at 50% 100%, rgba(249, 199, 132, 0.12), transparent 35%),
+        var(--bg);
       transition: 0.3s ease;
+      overflow-x: hidden;
+    }
+
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px);
+      background-size: 42px 42px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
+      pointer-events: none;
     }
 
     .app {
       width: 100%;
-      max-width: 480px;
-      margin: 0 auto;
+      max-width: 500px;
       min-height: 100vh;
+      margin: 0 auto;
       padding: 22px;
+      position: relative;
+      z-index: 1;
     }
 
     .topbar {
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      margin-bottom: 22px;
+      align-items: center;
+      margin-bottom: 18px;
     }
 
     .brand {
+      font-family: Orbitron, Inter, sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: 1px;
       display: flex;
       align-items: center;
       gap: 10px;
-      font-weight: 800;
-      font-size: 24px;
     }
 
-    .pin {
-      width: 34px;
-      height: 34px;
-      border-radius: 12px;
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 14px;
       background: linear-gradient(135deg, var(--deep-orange), var(--orange));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      box-shadow: 0 10px 25px rgba(255, 140, 66, 0.35);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 0 28px var(--glow);
     }
 
     .theme-btn {
-      border: none;
+      border: 1px solid var(--line);
       background: var(--card);
       color: var(--text);
-      border-radius: 999px;
-      padding: 11px 15px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
       font-size: 18px;
-      box-shadow: var(--shadow);
       cursor: pointer;
-      transition: 0.2s;
+      backdrop-filter: blur(14px);
     }
 
-    .theme-btn:active {
-      transform: scale(0.95);
-    }
-
-    .card {
-      background: rgba(255,255,255,0.72);
+    .panel {
+      border: 1px solid var(--line);
       background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 28px;
+      border-radius: 30px;
       padding: 22px;
-      box-shadow: var(--shadow);
       margin-bottom: 18px;
-      animation: fadeUp 0.5s ease;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(18px);
+      animation: enter 0.45s ease;
     }
 
-    body.dark .card {
-      background: rgba(23, 28, 51, 0.9);
+    .hero {
+      text-align: center;
+      padding-top: 10px;
     }
 
-    .status-card {
+    .radar-wrap {
+      width: 230px;
+      height: 230px;
+      margin: 8px auto 18px;
+      position: relative;
+      border-radius: 50%;
       display: grid;
-      grid-template-columns: 120px 1fr;
-      gap: 18px;
-      align-items: center;
+      place-items: center;
     }
 
     .radar {
-      width: 115px;
-      height: 115px;
+      width: 210px;
+      height: 210px;
       border-radius: 50%;
       position: relative;
-      background:
-        radial-gradient(circle, rgba(255,140,66,0.22) 0 8px, transparent 9px),
-        repeating-radial-gradient(circle, transparent 0 22px, rgba(78,89,140,0.25) 23px 24px),
-        linear-gradient(rgba(78,89,140,0.25), rgba(78,89,140,0.25));
       overflow: hidden;
-      border: 1px solid var(--border);
+      border: 1px solid rgba(255,255,255,0.18);
+      background:
+        radial-gradient(circle, rgba(255,140,66,0.9) 0 5px, transparent 6px),
+        repeating-radial-gradient(circle, transparent 0 30px, rgba(255,255,255,0.14) 31px 32px),
+        conic-gradient(from 0deg, rgba(255,140,66,0.35), transparent 35%, transparent);
+      box-shadow:
+        0 0 35px var(--glow),
+        inset 0 0 40px rgba(255, 140, 66, 0.12);
     }
 
     .radar::before {
       content: "";
       position: absolute;
-      width: 50%;
-      height: 50%;
-      background: linear-gradient(45deg, rgba(255,140,66,0.75), transparent);
-      left: 50%;
-      top: 0;
-      transform-origin: left bottom;
-      animation: scan 2.5s linear infinite;
+      inset: 50% 0 0 50%;
+      background: linear-gradient(45deg, rgba(255,140,66,0.8), transparent 65%);
+      transform-origin: left top;
+      animation: scan 2.6s linear infinite;
     }
 
     .radar::after {
       content: "";
       position: absolute;
-      inset: 50%;
-      width: 16px;
-      height: 16px;
-      margin: -8px;
+      inset: 18px;
       border-radius: 50%;
-      background: var(--deep-orange);
-      box-shadow: 0 0 25px var(--deep-orange);
+      border: 1px dashed rgba(255,255,255,0.24);
+      animation: pulse 2s ease-in-out infinite;
     }
 
-    .status-title {
-      font-weight: 800;
-      font-size: 16px;
-      margin-bottom: 12px;
-      display: flex;
+    .ping {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background: var(--deep-orange);
+      border-radius: 50%;
+      box-shadow: 0 0 18px var(--deep-orange);
+      animation: blink 1.2s infinite;
+    }
+
+    .ping.one { top: 65px; left: 135px; }
+    .ping.two { top: 135px; left: 72px; animation-delay: 0.4s; }
+    .ping.three { top: 108px; left: 160px; animation-delay: 0.8s; }
+
+    .status-pill {
+      display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 9px;
+      border: 1px solid var(--line);
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-family: Orbitron, Inter, sans-serif;
+      font-size: 13px;
+      letter-spacing: 0.8px;
     }
 
     .dot {
       width: 10px;
       height: 10px;
-      border-radius: 50%;
       background: #ef4444;
-      box-shadow: 0 0 15px #ef4444;
+      border-radius: 50%;
+      box-shadow: 0 0 14px #ef4444;
     }
 
     .dot.ok {
       background: #22c55e;
-      box-shadow: 0 0 15px #22c55e;
-    }
-
-    .distance-label {
-      color: var(--muted);
-      font-size: 14px;
-      margin-bottom: 4px;
+      box-shadow: 0 0 14px #22c55e;
     }
 
     .distance {
-      font-size: 34px;
+      font-family: Orbitron, Inter, sans-serif;
+      font-size: 42px;
       font-weight: 800;
+      margin-top: 14px;
       color: var(--deep-orange);
+      text-shadow: 0 0 22px var(--glow);
     }
 
-    .substatus {
-      font-size: 14px;
+    .sub {
       color: var(--muted);
       margin-top: 6px;
+      font-size: 14px;
     }
 
-    .chat-header {
+    .chat-top {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
 
     .chat-title {
-      font-size: 22px;
+      font-family: Orbitron, Inter, sans-serif;
+      font-size: 19px;
       font-weight: 800;
+      letter-spacing: 0.8px;
     }
 
     .badge {
-      background: rgba(78, 89, 140, 0.12);
-      color: var(--text);
-      padding: 8px 12px;
+      padding: 8px 11px;
       border-radius: 999px;
-      font-size: 13px;
-      font-weight: 600;
+      background: rgba(255, 140, 66, 0.16);
+      color: var(--deep-orange);
+      font-size: 12px;
+      font-weight: 800;
     }
 
     #locked {
       text-align: center;
-      padding: 30px 15px;
       color: var(--muted);
+      padding: 28px 8px;
       font-weight: 600;
     }
 
@@ -235,74 +264,71 @@
     #messages {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
       max-height: 360px;
       overflow-y: auto;
       padding-right: 4px;
-      margin-bottom: 16px;
+      margin-bottom: 15px;
     }
 
     .message {
       background: var(--bubble);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 12px 14px;
-      box-shadow: 0 8px 22px rgba(0,0,0,0.07);
+      border: 1px solid var(--line);
+      padding: 13px 14px;
+      border-radius: 18px;
       animation: pop 0.25s ease;
-      word-wrap: break-word;
+      word-break: break-word;
     }
 
-    .message .name {
+    .name {
+      color: var(--orange);
       font-weight: 800;
-      color: var(--blue);
-      font-size: 13px;
-      margin-bottom: 4px;
+      font-size: 12px;
+      margin-bottom: 5px;
+      font-family: Orbitron, Inter, sans-serif;
     }
 
-    .message .text {
+    .text {
+      line-height: 1.45;
       font-size: 15px;
-      line-height: 1.4;
     }
 
     .input-row {
       display: flex;
       gap: 10px;
-      align-items: center;
     }
 
     input {
       flex: 1;
-      border: 1px solid var(--border);
-      background: var(--card);
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.07);
       color: var(--text);
       padding: 15px 16px;
-      border-radius: 999px;
+      border-radius: 18px;
       outline: none;
       font-size: 15px;
-      box-shadow: inset 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    body.light input {
+      background: rgba(255,255,255,0.8);
     }
 
     .send-btn {
-      width: 52px;
-      height: 52px;
+      width: 54px;
       border: none;
-      border-radius: 50%;
-      color: white;
+      border-radius: 18px;
       background: linear-gradient(135deg, var(--deep-orange), var(--orange));
-      font-size: 21px;
+      color: white;
+      font-size: 22px;
+      box-shadow: 0 0 26px var(--glow);
       cursor: pointer;
-      box-shadow: 0 12px 25px rgba(255, 140, 66, 0.35);
-    }
-
-    .send-btn:active {
-      transform: scale(0.95);
     }
 
     .footer {
       text-align: center;
+      font-size: 12px;
       color: var(--muted);
-      font-size: 13px;
-      margin-top: 18px;
+      margin-top: 20px;
     }
 
     @keyframes scan {
@@ -310,7 +336,17 @@
       to { transform: rotate(360deg); }
     }
 
-    @keyframes fadeUp {
+    @keyframes pulse {
+      0%, 100% { transform: scale(0.96); opacity: 0.5; }
+      50% { transform: scale(1.05); opacity: 1; }
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 0.35; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.25); }
+    }
+
+    @keyframes enter {
       from { opacity: 0; transform: translateY(18px); }
       to { opacity: 1; transform: translateY(0); }
     }
@@ -323,55 +359,58 @@
 </head>
 
 <body>
-  <div class="app">
+  <div class="grid-bg"></div>
 
+  <div class="app">
     <div class="topbar">
       <div class="brand">
-        <div class="pin">📍</div>
+        <div class="brand-icon">📡</div>
         GeoChat
       </div>
-      <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+      <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">☀️</button>
     </div>
 
-    <div class="card status-card">
-      <div class="radar"></div>
-
-      <div>
-        <div class="status-title">
-          <span id="dot" class="dot"></span>
-          <span id="statusText">Controllo posizione...</span>
+    <div class="panel hero">
+      <div class="radar-wrap">
+        <div class="radar">
+          <div class="ping one"></div>
+          <div class="ping two"></div>
+          <div class="ping three"></div>
         </div>
-
-        <div class="distance-label">Distanza dal centro</div>
-        <div class="distance" id="distanceText">-- m</div>
-        <div class="substatus" id="subStatus">Attendi qualche secondo</div>
       </div>
+
+      <div class="status-pill">
+        <span id="dot" class="dot"></span>
+        <span id="statusText">SCANSIONE AREA...</span>
+      </div>
+
+      <div class="distance" id="distanceText">-- m</div>
+      <div class="sub" id="subStatus">Attendi il segnale GPS</div>
     </div>
 
-    <div class="card">
-      <div class="chat-header">
-        <div class="chat-title">💬 Chat Area</div>
-        <div class="badge" id="chatBadge">GPS attivo</div>
+    <div class="panel">
+      <div class="chat-top">
+        <div class="chat-title">CHAT ZONA</div>
+        <div class="badge" id="chatBadge">LOCKED</div>
       </div>
 
       <div id="locked">
-        🔒 Devi essere dentro l’area per leggere e scrivere.
+        🔒 Accesso consentito solo dentro l’area.
       </div>
 
       <div id="chat">
         <div id="messages"></div>
 
         <div class="input-row">
-          <input id="message" placeholder="Scrivi un messaggio..." maxlength="300" />
+          <input id="message" placeholder="Trasmetti messaggio..." maxlength="300" />
           <button class="send-btn" onclick="sendMessage()">➤</button>
         </div>
       </div>
     </div>
 
     <div class="footer">
-      Connettiti solo dove sei davvero 📍
+      GEOCHAT SYSTEM · POSITION BASED ACCESS
     </div>
-
   </div>
 
   <script type="module">
@@ -407,24 +446,24 @@
       if (distance <= radius) {
         inside = true;
         document.getElementById("dot").classList.add("ok");
-        document.getElementById("statusText").innerText = "SEI DENTRO L’AREA";
-        document.getElementById("subStatus").innerText = "Chat attiva";
+        document.getElementById("statusText").innerText = "AREA SBLOCCATA";
+        document.getElementById("subStatus").innerText = "Sei dentro il perimetro";
         document.getElementById("chat").style.display = "block";
         document.getElementById("locked").style.display = "none";
-        document.getElementById("chatBadge").innerText = "Online";
+        document.getElementById("chatBadge").innerText = "LIVE";
       } else {
         inside = false;
         document.getElementById("dot").classList.remove("ok");
-        document.getElementById("statusText").innerText = "SEI FUORI AREA";
-        document.getElementById("subStatus").innerText = "Chat bloccata";
+        document.getElementById("statusText").innerText = "FUORI AREA";
+        document.getElementById("subStatus").innerText = "Avvicinati alla zona attiva";
         document.getElementById("chat").style.display = "none";
         document.getElementById("locked").style.display = "block";
-        document.getElementById("chatBadge").innerText = "Bloccata";
+        document.getElementById("chatBadge").innerText = "LOCKED";
       }
     }
 
     function gpsError() {
-      document.getElementById("statusText").innerText = "GPS non disponibile";
+      document.getElementById("statusText").innerText = "GPS OFFLINE";
       document.getElementById("subStatus").innerText = "Controlla i permessi posizione";
     }
 
@@ -472,11 +511,12 @@
       container.innerHTML = "";
 
       snapshot.forEach(doc => {
+        const data = doc.data();
         const div = document.createElement("div");
         div.className = "message";
         div.innerHTML = `
-          <div class="name">Utente</div>
-          <div class="text">${escapeHtml(doc.data().text)}</div>
+          <div class="name">UTENTE</div>
+          <div class="text">${escapeHtml(data.text)}</div>
         `;
         container.appendChild(div);
       });
@@ -493,16 +533,16 @@
 
   <script>
     function toggleTheme() {
-      document.body.classList.toggle("dark");
+      document.body.classList.toggle("light");
 
-      const dark = document.body.classList.contains("dark");
-      localStorage.setItem("theme", dark ? "dark" : "light");
-      document.getElementById("themeBtn").innerText = dark ? "☀️" : "🌙";
+      const light = document.body.classList.contains("light");
+      localStorage.setItem("theme", light ? "light" : "dark");
+      document.getElementById("themeBtn").innerText = light ? "🌙" : "☀️";
     }
 
-    if (localStorage.getItem("theme") === "dark") {
-      document.body.classList.add("dark");
-      document.getElementById("themeBtn").innerText = "☀️";
+    if (localStorage.getItem("theme") === "light") {
+      document.body.classList.add("light");
+      document.getElementById("themeBtn").innerText = "🌙";
     }
   </script>
 </body>
