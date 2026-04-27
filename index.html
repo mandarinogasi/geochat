@@ -87,6 +87,14 @@ body.light input{background:rgba(255,255,255,.8)}
 .auth-row{display:flex;gap:10px}
 .auth-row button{flex:1}
 .logout-btn{font-size:11px;padding:7px 9px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted)}
+.admin-panel{display:none;border:1px solid rgba(255,140,66,.35);background:linear-gradient(135deg,rgba(255,140,66,.14),rgba(78,89,140,.12));}
+.admin-title{font-family:Orbitron;font-size:18px;font-weight:800;margin-bottom:8px;color:var(--deep-orange)}
+.admin-sub{font-size:12px;color:var(--muted);margin-bottom:12px}
+.admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.admin-btn{border:none;border-radius:16px;padding:12px;color:white;font-weight:800;background:linear-gradient(135deg,#ff4d4d,var(--deep-orange));cursor:pointer;box-shadow:0 0 22px rgba(255,77,77,.22)}
+.admin-btn.secondary{background:linear-gradient(135deg,var(--blue),var(--deep-orange))}
+.delete-msg-btn{margin-top:6px;border:none;border-radius:999px;background:rgba(255,77,77,.92);color:white;font-size:10px;font-weight:800;padding:5px 8px;cursor:pointer}
+.message-row.me .delete-msg-btn{background:rgba(255,255,255,.24)}
 @keyframes scan{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 @keyframes pulse{0%,100%{transform:scale(.96);opacity:.5}50%{transform:scale(1.05);opacity:1}}
 @keyframes pop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
@@ -157,6 +165,15 @@ body.light input{background:rgba(255,255,255,.8)}
 </div>
 </div>
 
+<div class="panel admin-panel" id="adminPanel">
+<div class="admin-title">👑 ADMIN PANEL</div>
+<div class="admin-sub">Controlli visibili solo all’admin.</div>
+<div class="admin-grid">
+<button class="admin-btn" onclick="clearChat()">🧹 Svuota chat</button>
+<button class="admin-btn secondary" onclick="resetPresence()">👥 Reset online</button>
+</div>
+</div>
+
 <div class="footer">GEOCHAT SYSTEM · POSITION BASED ACCESS</div>
 </div>
 
@@ -180,7 +197,7 @@ body.light input{background:rgba(255,255,255,.8)}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { 
-  getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, setDoc, where, getDoc
+  getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, setDoc, where, getDoc, getDocs, deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
@@ -200,6 +217,10 @@ const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
 const auth=getAuth(app);
 const provider=new GoogleAuthProvider();
+const ADMIN_UID="RMopEnepnfhRKNAWS4Nu1PWoakd2";
+let isAdmin=false;
+const notifyAudio=new Audio("notifica.mp3");
+notifyAudio.preload="auto";
 
 const centerLat=40.61581525171119;
 const centerLng=15.047397231044794;
@@ -262,6 +283,8 @@ onAuthStateChanged(auth,async(user)=>{
 if(user){
 currentUser=user;
 userId=user.uid;
+isAdmin=(userId===ADMIN_UID);
+document.getElementById("adminPanel").style.display=isAdmin?"block":"none";
 document.getElementById("authScreen").style.display="none";
 await loadProfile();
 startListeners();
@@ -269,6 +292,8 @@ updatePresence();
 }else{
 currentUser=null;
 userId=null;
+isAdmin=false;
+document.getElementById("adminPanel").style.display="none";
 document.getElementById("authScreen").style.display="flex";
 }
 });
@@ -305,6 +330,7 @@ window.toggleSound=function(){
 soundEnabled=!soundEnabled;
 localStorage.setItem("geochat_sound",soundEnabled);
 refreshSettingsUI();
+if(soundEnabled) playNotifySound();
 };
 
 window.toggleVibration=function(){
@@ -316,25 +342,23 @@ if(vibrationEnabled && navigator.vibrate) navigator.vibrate(80);
 
 function playNotifySound(){
 try{
-const AudioContext=window.AudioContext||window.webkitAudioContext;
-const ctx=new AudioContext();
-const oscillator=ctx.createOscillator();
-const gain=ctx.createGain();
-oscillator.type="sine";
-oscillator.frequency.setValueAtTime(880,ctx.currentTime);
-gain.gain.setValueAtTime(0.0001,ctx.currentTime);
-gain.gain.exponentialRampToValueAtTime(0.18,ctx.currentTime+0.02);
-gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.18);
-oscillator.connect(gain);
-gain.connect(ctx.destination);
-oscillator.start();
-oscillator.stop(ctx.currentTime+0.2);
-}catch(e){}
+notifyAudio.currentTime=0;
+const p=notifyAudio.play();
+if(p && typeof p.catch==="function"){
+p.catch(e=>console.log("audio bloccato dal browser",e));
+}
+}catch(e){
+console.log("audio error",e);
+}
 }
 
 function notifyNewMessage(){
 if(soundEnabled) playNotifySound();
-if(vibrationEnabled && navigator.vibrate) navigator.vibrate([80,40,80]);
+if(vibrationEnabled){
+try{
+if(navigator.vibrate) navigator.vibrate([120,60,120]);
+}catch(e){}
+}
 }
 
 function refreshProfileUI(){
@@ -500,6 +524,32 @@ time:Date.now()
 input.value="";
 };
 
+window.deleteMessage=async function(messageId){
+if(!isAdmin)return;
+if(!confirm("Eliminare questo messaggio?"))return;
+await deleteDoc(doc(db,"messages",messageId));
+};
+
+window.clearChat=async function(){
+if(!isAdmin)return;
+if(!confirm("Svuotare tutta la chat?"))return;
+const snap=await getDocs(collection(db,"messages"));
+const jobs=[];
+snap.forEach(d=>jobs.push(deleteDoc(doc(db,"messages",d.id))));
+await Promise.all(jobs);
+alert("Chat svuotata");
+};
+
+window.resetPresence=async function(){
+if(!isAdmin)return;
+if(!confirm("Resettare gli utenti online?"))return;
+const snap=await getDocs(collection(db,"presence"));
+const jobs=[];
+snap.forEach(d=>jobs.push(deleteDoc(doc(db,"presence",d.id))));
+await Promise.all(jobs);
+alert("Presenze resettate");
+};
+
 function startListeners(){
 if(unsubscribeMessages) unsubscribeMessages();
 if(unsubscribePresence) unsubscribePresence();
@@ -510,8 +560,9 @@ unsubscribeMessages=onSnapshot(messagesQuery,(snapshot)=>{
 const container=document.getElementById("messages");
 container.innerHTML="";
 
-snapshot.forEach(doc=>{
-const data=doc.data();
+snapshot.forEach(docSnap=>{
+const data=docSnap.data();
+const messageId=docSnap.id;
 const safeName=escapeHtml(data.name||"Utente");
 const safeText=escapeHtml(data.text||"");
 const avatar=data.avatar||"";
@@ -527,6 +578,7 @@ ${avatar?`<img src="${avatar}">`:safeName[0].toUpperCase()}
 <div class="message-bubble">
 <div class="name">${isMe?"TU":safeName}</div>
 <div class="text">${safeText}</div>
+${isAdmin?`<button class="delete-msg-btn" onclick="deleteMessage('${messageId}')">Elimina</button>`:""}
 </div>
 `;
 
