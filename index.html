@@ -93,6 +93,18 @@ body.light input{background:rgba(255,255,255,.8)}
 .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .admin-btn{border:none;border-radius:16px;padding:12px;color:white;font-weight:800;background:linear-gradient(135deg,#ff4d4d,var(--deep-orange));cursor:pointer;box-shadow:0 0 22px rgba(255,77,77,.22)}
 .admin-btn.secondary{background:linear-gradient(135deg,var(--blue),var(--deep-orange))}
+.admin-section{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.admin-label{font-size:12px;font-weight:800;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.7px}
+.admin-input{width:100%;min-height:72px;resize:vertical;border:1px solid var(--line);background:rgba(255,255,255,.07);color:var(--text);padding:12px;border-radius:16px;outline:none;font-size:14px;font-family:Inter,Arial,sans-serif}
+.admin-user-list{display:flex;flex-direction:column;gap:8px;margin-top:10px;max-height:220px;overflow:auto}
+.admin-user{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bubble);border:1px solid var(--line);border-radius:16px;padding:10px}
+.admin-user-main{min-width:0;text-align:left}
+.admin-user-name{font-weight:800;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.admin-user-id{font-size:10px;color:var(--muted);word-break:break-all;margin-top:3px}
+.admin-mini-btn{border:none;border-radius:999px;padding:8px 10px;font-size:11px;font-weight:800;color:white;background:linear-gradient(135deg,#ff4d4d,var(--deep-orange));cursor:pointer;white-space:nowrap}
+.admin-mini-btn.unban{background:linear-gradient(135deg,#22c55e,var(--blue))}
+.pinned-banner{display:none;margin-bottom:14px;border:1px solid rgba(255,140,66,.35);background:rgba(255,140,66,.12);color:var(--text);padding:12px 14px;border-radius:18px;font-size:14px;line-height:1.4}
+.pinned-banner b{color:var(--deep-orange);font-family:Orbitron;font-size:12px;margin-right:6px}
 .delete-msg-btn{margin-top:6px;border:none;border-radius:999px;background:rgba(255,77,77,.92);color:white;font-size:10px;font-weight:800;padding:5px 8px;cursor:pointer}
 .message-row.me .delete-msg-btn{background:rgba(255,255,255,.24)}
 @keyframes scan{from{transform:rotate(0)}to{transform:rotate(360deg)}}
@@ -154,6 +166,8 @@ body.light input{background:rgba(255,255,255,.8)}
 <button class="toggle-btn" id="vibrationBtn" onclick="toggleVibration()">📳 Vibrazione</button>
 </div>
 
+<div id="pinnedBanner" class="pinned-banner"></div>
+
 <div id="locked">🔒 Accesso consentito solo dentro l’area.</div>
 
 <div id="chat">
@@ -168,9 +182,25 @@ body.light input{background:rgba(255,255,255,.8)}
 <div class="panel admin-panel" id="adminPanel">
 <div class="admin-title">👑 ADMIN PANEL</div>
 <div class="admin-sub">Controlli visibili solo all’admin.</div>
+
 <div class="admin-grid">
 <button class="admin-btn" onclick="clearChat()">🧹 Svuota chat</button>
 <button class="admin-btn secondary" onclick="resetPresence()">👥 Reset online</button>
+</div>
+
+<div class="admin-section">
+<div class="admin-label">📌 Messaggio fissato</div>
+<textarea class="admin-input" id="pinnedInput" placeholder="Scrivi un messaggio admin da mostrare sopra la chat..."></textarea>
+<div class="admin-grid" style="margin-top:10px">
+<button class="admin-btn secondary" onclick="savePinnedMessage()">📌 Salva avviso</button>
+<button class="admin-btn" onclick="clearPinnedMessage()">✖ Rimuovi</button>
+</div>
+</div>
+
+<div class="admin-section">
+<div class="admin-label">👥 Utenti online / ban</div>
+<div class="admin-sub">Puoi bannare o sbloccare utenti presenti nella zona.</div>
+<div class="admin-user-list" id="adminUsersList"></div>
 </div>
 </div>
 
@@ -234,6 +264,12 @@ let firstSnapshot=true;
 let profile={name:"",avatar:""};
 let unsubscribeMessages=null;
 let unsubscribePresence=null;
+let unsubscribePinned=null;
+let unsubscribeOwnBan=null;
+let unsubscribeBans=null;
+let isBanned=false;
+let latestOnlineUsers=[];
+let activeBans={};
 
 let soundEnabled=localStorage.getItem("geochat_sound")==="true";
 let vibrationEnabled=localStorage.getItem("geochat_vibration")==="true";
@@ -293,6 +329,17 @@ updatePresence();
 currentUser=null;
 userId=null;
 isAdmin=false;
+isBanned=false;
+latestOnlineUsers=[];
+activeBans={};
+if(unsubscribeMessages) unsubscribeMessages();
+if(unsubscribePresence) unsubscribePresence();
+if(unsubscribePinned) unsubscribePinned();
+if(unsubscribeOwnBan) unsubscribeOwnBan();
+if(unsubscribeBans) unsubscribeBans();
+if(unsubscribePinned) unsubscribePinned();
+if(unsubscribeOwnBan) unsubscribeOwnBan();
+if(unsubscribeBans) unsubscribeBans();
 document.getElementById("adminPanel").style.display="none";
 document.getElementById("authScreen").style.display="flex";
 }
@@ -343,13 +390,8 @@ if(vibrationEnabled && navigator.vibrate) navigator.vibrate(80);
 function playNotifySound(){
 try{
 notifyAudio.currentTime=0;
-const p=notifyAudio.play();
-if(p && typeof p.catch==="function"){
-p.catch(e=>console.log("audio bloccato dal browser",e));
-}
-}catch(e){
-console.log("audio error",e);
-}
+notifyAudio.play();
+}catch(e){console.log("audio error",e);}
 }
 
 function notifyNewMessage(){
@@ -441,8 +483,26 @@ const distance=getDistance(lat,lng,centerLat,centerLng);
 
 document.getElementById("distanceText").innerText=distance.toFixed(2)+" m";
 
-if(distance<=radius){
-inside=true;
+inside = distance <= radius;
+renderAccessState();
+updatePresence();
+}
+
+function renderAccessState(){
+if(isBanned){
+document.getElementById("dot").classList.remove("ok");
+document.getElementById("statusText").innerText="UTENTE BANNATO";
+document.getElementById("subStatus").innerText="Non puoi accedere alla chat";
+document.getElementById("chat").style.display="none";
+document.getElementById("locked").style.display="block";
+document.getElementById("locked").innerText="🚫 Sei stato bannato da questa zona.";
+document.getElementById("chatBadge").innerText="BANNED";
+return;
+}
+
+document.getElementById("locked").innerText="🔒 Accesso consentito solo dentro l’area.";
+
+if(inside){
 document.getElementById("dot").classList.add("ok");
 document.getElementById("statusText").innerText="AREA SBLOCCATA";
 document.getElementById("subStatus").innerText="Sei dentro il perimetro";
@@ -450,7 +510,6 @@ document.getElementById("chat").style.display="block";
 document.getElementById("locked").style.display="none";
 document.getElementById("chatBadge").innerText="LIVE";
 }else{
-inside=false;
 document.getElementById("dot").classList.remove("ok");
 document.getElementById("statusText").innerText="FUORI AREA";
 document.getElementById("subStatus").innerText="Avvicinati alla zona attiva";
@@ -458,8 +517,6 @@ document.getElementById("chat").style.display="none";
 document.getElementById("locked").style.display="block";
 document.getElementById("chatBadge").innerText="LOCKED";
 }
-
-updatePresence();
 }
 
 function gpsError(){
@@ -480,7 +537,7 @@ if(!userId || !currentUser)return;
 try{
 await setDoc(doc(db,"presence",userId),{
 name:profile.name||"",
-inside:inside,
+inside:inside && !isBanned,
 lastSeen:Date.now()
 });
 }catch(e){console.log("presence error",e);}
@@ -496,7 +553,7 @@ updatePresence();
 navigator.geolocation.watchPosition(checkArea,gpsError,{enableHighAccuracy:true,maximumAge:3000,timeout:10000});
 
 window.sendMessage=async function(){
-if(!inside)return;
+if(!inside || isBanned)return;
 
 if(!currentUser){
 alert("Devi fare login");
@@ -550,9 +607,113 @@ await Promise.all(jobs);
 alert("Presenze resettate");
 };
 
+window.banUser=async function(uid){
+if(!isAdmin || uid===ADMIN_UID)return;
+const target=latestOnlineUsers.find(u=>u.uid===uid);
+const name=target?target.name:"Utente";
+if(!confirm("Bannare " + (name || uid) + "?"))return;
+await setDoc(doc(db,"bans",uid),{
+name:name||"Utente",
+active:true,
+bannedAt:Date.now(),
+bannedBy:userId
+});
+};
+
+window.unbanUser=async function(uid){
+if(!isAdmin)return;
+const target=latestOnlineUsers.find(u=>u.uid===uid);
+const name=target?target.name:"Utente";
+if(!confirm("Sbloccare " + (name || uid) + "?"))return;
+await setDoc(doc(db,"bans",uid),{
+name:name||"Utente",
+active:false,
+unbannedAt:Date.now(),
+unbannedBy:userId
+},{merge:true});
+};
+
+window.savePinnedMessage=async function(){
+if(!isAdmin)return;
+const text=document.getElementById("pinnedInput").value.trim();
+await setDoc(doc(db,"appConfig","main"),{
+pinnedText:text,
+updatedAt:Date.now(),
+updatedBy:userId
+},{merge:true});
+};
+
+window.clearPinnedMessage=async function(){
+if(!isAdmin)return;
+await setDoc(doc(db,"appConfig","main"),{
+pinnedText:"",
+updatedAt:Date.now(),
+updatedBy:userId
+},{merge:true});
+document.getElementById("pinnedInput").value="";
+};
+
+function renderAdminUsers(){
+if(!isAdmin)return;
+const box=document.getElementById("adminUsersList");
+if(!box)return;
+if(latestOnlineUsers.length===0){
+box.innerHTML=`<div class="admin-sub">Nessun utente online.</div>`;
+return;
+}
+box.innerHTML="";
+latestOnlineUsers.forEach(u=>{
+const banned=activeBans[u.uid]===true;
+const safeName=escapeHtml(u.name||"Utente");
+const row=document.createElement("div");
+row.className="admin-user";
+row.innerHTML=`
+<div class="admin-user-main">
+<div class="admin-user-name">${safeName} ${u.uid===ADMIN_UID?"👑":""}</div>
+<div class="admin-user-id">${u.uid}</div>
+</div>
+${u.uid===ADMIN_UID?`<span class="badge">ADMIN</span>`:(banned?`<button class="admin-mini-btn unban" onclick="unbanUser('${u.uid}')">Sblocca</button>`:`<button class="admin-mini-btn" onclick="banUser('${u.uid}')">Ban</button>`)}
+`;
+box.appendChild(row);
+});
+}
+
 function startListeners(){
 if(unsubscribeMessages) unsubscribeMessages();
 if(unsubscribePresence) unsubscribePresence();
+if(unsubscribePinned) unsubscribePinned();
+if(unsubscribeOwnBan) unsubscribeOwnBan();
+if(unsubscribeBans) unsubscribeBans();
+
+unsubscribePinned=onSnapshot(doc(db,"appConfig","main"),(snap)=>{
+const data=snap.exists()?snap.data():{};
+const text=(data.pinnedText||"").trim();
+const banner=document.getElementById("pinnedBanner");
+if(text){
+banner.innerHTML=`<b>ADMIN</b> ${escapeHtml(text)}`;
+banner.style.display="block";
+}else{
+banner.innerHTML="";
+banner.style.display="none";
+}
+if(isAdmin){
+document.getElementById("pinnedInput").value=text;
+}
+});
+
+unsubscribeOwnBan=onSnapshot(doc(db,"bans",userId),(snap)=>{
+isBanned=snap.exists() && snap.data().active===true;
+renderAccessState();
+updatePresence();
+});
+
+if(isAdmin){
+unsubscribeBans=onSnapshot(collection(db,"bans"),(snap)=>{
+activeBans={};
+snap.forEach(d=>{activeBans[d.id]=d.data().active===true;});
+renderAdminUsers();
+});
+}
 
 const messagesQuery=query(collection(db,"messages"),orderBy("time"));
 
@@ -607,14 +768,17 @@ unsubscribePresence=onSnapshot(presenceQuery,(snapshot)=>{
 const now=Date.now();
 let count=0;
 
-snapshot.forEach(doc=>{
-const data=doc.data();
+latestOnlineUsers=[];
+snapshot.forEach(docSnap=>{
+const data=docSnap.data();
 if(data.lastSeen && now-data.lastSeen<45000){
 count++;
+latestOnlineUsers.push({uid:docSnap.id,name:data.name||"Utente",lastSeen:data.lastSeen});
 }
 });
 
 document.getElementById("onlineBadge").innerText="👥 "+count;
+renderAdminUsers();
 });
 }
 
