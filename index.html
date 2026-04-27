@@ -1,159 +1,509 @@
 <!DOCTYPE html>
-<html>
+<html lang="it">
 <head>
-    <title>GeoChat</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <title>GeoChat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <style>
-        body {
-            font-family: Arial;
-            text-align: center;
-            padding: 30px;
-            background: #111;
-            color: white;
-        }
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-        button {
-            padding: 15px;
-            font-size: 18px;
-            background: #00ff99;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
+  <style>
+    :root {
+      --blue: #4E598C;
+      --white: #FFFFFF;
+      --cream: #F9C784;
+      --orange: #FCAF58;
+      --deep-orange: #FF8C42;
 
-        #status {
-            margin-top: 20px;
-            font-size: 20px;
-        }
+      --bg: #f7f7fb;
+      --card: #ffffff;
+      --text: #12172f;
+      --muted: #6b7280;
+      --border: rgba(78, 89, 140, 0.16);
+      --bubble: #ffffff;
+      --shadow: 0 18px 45px rgba(78, 89, 140, 0.18);
+    }
 
-        #chat {
-            margin-top: 30px;
-        }
+    body.dark {
+      --bg: #101426;
+      --card: #171c33;
+      --text: #ffffff;
+      --muted: #b7bfd8;
+      --border: rgba(255, 255, 255, 0.10);
+      --bubble: #202642;
+      --shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+    }
 
-        input {
-            padding: 10px;
-            width: 70%;
-            border-radius: 8px;
-            border: none;
-        }
+    * {
+      box-sizing: border-box;
+    }
 
-        #messages {
-            margin-top: 20px;
-            text-align: left;
-        }
+    body {
+      margin: 0;
+      font-family: Inter, Arial, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(255, 140, 66, 0.22), transparent 35%),
+        radial-gradient(circle at bottom right, rgba(78, 89, 140, 0.22), transparent 35%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: 0.3s ease;
+    }
 
-        #messages div {
-            background: #222;
-            padding: 10px;
-            margin-top: 5px;
-            border-radius: 8px;
-        }
-    </style>
+    .app {
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      padding: 22px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 22px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 24px;
+    }
+
+    .pin {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--deep-orange), var(--orange));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 10px 25px rgba(255, 140, 66, 0.35);
+    }
+
+    .theme-btn {
+      border: none;
+      background: var(--card);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 11px 15px;
+      font-size: 18px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .theme-btn:active {
+      transform: scale(0.95);
+    }
+
+    .card {
+      background: rgba(255,255,255,0.72);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      padding: 22px;
+      box-shadow: var(--shadow);
+      margin-bottom: 18px;
+      animation: fadeUp 0.5s ease;
+    }
+
+    body.dark .card {
+      background: rgba(23, 28, 51, 0.9);
+    }
+
+    .status-card {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 18px;
+      align-items: center;
+    }
+
+    .radar {
+      width: 115px;
+      height: 115px;
+      border-radius: 50%;
+      position: relative;
+      background:
+        radial-gradient(circle, rgba(255,140,66,0.22) 0 8px, transparent 9px),
+        repeating-radial-gradient(circle, transparent 0 22px, rgba(78,89,140,0.25) 23px 24px),
+        linear-gradient(rgba(78,89,140,0.25), rgba(78,89,140,0.25));
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .radar::before {
+      content: "";
+      position: absolute;
+      width: 50%;
+      height: 50%;
+      background: linear-gradient(45deg, rgba(255,140,66,0.75), transparent);
+      left: 50%;
+      top: 0;
+      transform-origin: left bottom;
+      animation: scan 2.5s linear infinite;
+    }
+
+    .radar::after {
+      content: "";
+      position: absolute;
+      inset: 50%;
+      width: 16px;
+      height: 16px;
+      margin: -8px;
+      border-radius: 50%;
+      background: var(--deep-orange);
+      box-shadow: 0 0 25px var(--deep-orange);
+    }
+
+    .status-title {
+      font-weight: 800;
+      font-size: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ef4444;
+      box-shadow: 0 0 15px #ef4444;
+    }
+
+    .dot.ok {
+      background: #22c55e;
+      box-shadow: 0 0 15px #22c55e;
+    }
+
+    .distance-label {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .distance {
+      font-size: 34px;
+      font-weight: 800;
+      color: var(--deep-orange);
+    }
+
+    .substatus {
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .chat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .chat-title {
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .badge {
+      background: rgba(78, 89, 140, 0.12);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    #locked {
+      text-align: center;
+      padding: 30px 15px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    #chat {
+      display: none;
+    }
+
+    #messages {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 360px;
+      overflow-y: auto;
+      padding-right: 4px;
+      margin-bottom: 16px;
+    }
+
+    .message {
+      background: var(--bubble);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 12px 14px;
+      box-shadow: 0 8px 22px rgba(0,0,0,0.07);
+      animation: pop 0.25s ease;
+      word-wrap: break-word;
+    }
+
+    .message .name {
+      font-weight: 800;
+      color: var(--blue);
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .message .text {
+      font-size: 15px;
+      line-height: 1.4;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    input {
+      flex: 1;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      padding: 15px 16px;
+      border-radius: 999px;
+      outline: none;
+      font-size: 15px;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .send-btn {
+      width: 52px;
+      height: 52px;
+      border: none;
+      border-radius: 50%;
+      color: white;
+      background: linear-gradient(135deg, var(--deep-orange), var(--orange));
+      font-size: 21px;
+      cursor: pointer;
+      box-shadow: 0 12px 25px rgba(255, 140, 66, 0.35);
+    }
+
+    .send-btn:active {
+      transform: scale(0.95);
+    }
+
+    .footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 18px;
+    }
+
+    @keyframes scan {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pop {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+  </style>
 </head>
 
 <body>
+  <div class="app">
 
-    <h1>📡 GeoChat</h1>
-    <p>Chat attiva solo dentro area</p>
-
-    <div id="status">Caricamento posizione...</div>
-
-    <div id="chat" style="display:none;">
-        <h2>💬 Chat Area</h2>
-        <input id="message" placeholder="Scrivi..." />
-        <br>
-        <button onclick="sendMessage()">Invia</button>
-        <div id="messages"></div>
+    <div class="topbar">
+      <div class="brand">
+        <div class="pin">📍</div>
+        GeoChat
+      </div>
+      <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">🌙</button>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } 
-        from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    <div class="card status-card">
+      <div class="radar"></div>
 
-        const firebaseConfig = {
-          apiKey: "AIzaSyD7cztFTFUz_zSiGeBbibzERV14KpKNhQw",
-          authDomain: "geochat-51d5c.firebaseapp.com",
-          projectId: "geochat-51d5c",
-          storageBucket: "geochat-51d5c.firebasestorage.app",
-          messagingSenderId: "663629006541",
-          appId: "1:663629006541:web:0fda395d92f15fb7c4cb84"
-        };
+      <div>
+        <div class="status-title">
+          <span id="dot" class="dot"></span>
+          <span id="statusText">Controllo posizione...</span>
+        </div>
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        <div class="distance-label">Distanza dal centro</div>
+        <div class="distance" id="distanceText">-- m</div>
+        <div class="substatus" id="subStatus">Attendi qualche secondo</div>
+      </div>
+    </div>
 
-        const centerLat = 40.61581525171119;
-        const centerLng = 15.047397231044794;
-        const radius = 15;
+    <div class="card">
+      <div class="chat-header">
+        <div class="chat-title">💬 Chat Area</div>
+        <div class="badge" id="chatBadge">GPS attivo</div>
+      </div>
 
-        let inside = false;
+      <div id="locked">
+        🔒 Devi essere dentro l’area per leggere e scrivere.
+      </div>
 
-        function checkArea(position) {
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
+      <div id="chat">
+        <div id="messages"></div>
 
-            const distance = getDistance(lat, lng, centerLat, centerLng);
+        <div class="input-row">
+          <input id="message" placeholder="Scrivi un messaggio..." maxlength="300" />
+          <button class="send-btn" onclick="sendMessage()">➤</button>
+        </div>
+      </div>
+    </div>
 
-            if (distance <= radius) {
-                inside = true;
-                document.getElementById("status").innerText =
-                    "✅ SEI DENTRO (" + distance.toFixed(2) + "m)";
-                document.getElementById("chat").style.display = "block";
-            } else {
-                inside = false;
-                document.getElementById("status").innerText =
-                    "❌ SEI FUORI (" + distance.toFixed(2) + "m)";
-                document.getElementById("chat").style.display = "none";
-            }
-        }
+    <div class="footer">
+      Connettiti solo dove sei davvero 📍
+    </div>
 
-        function getDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371000;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
+  </div>
 
-            const a =
-                Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(lat1 * Math.PI/180) *
-                Math.cos(lat2 * Math.PI/180) *
-                Math.sin(dLon/2) * Math.sin(dLon/2);
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } 
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
-        }
+    const firebaseConfig = {
+      apiKey: "AIzaSyD7cztFTFUz_zSiGeBbibzERV14KpKNhQw",
+      authDomain: "geochat-51d5c.firebaseapp.com",
+      projectId: "geochat-51d5c",
+      storageBucket: "geochat-51d5c.firebasestorage.app",
+      messagingSenderId: "663629006541",
+      appId: "1:663629006541:web:0fda395d92f15fb7c4cb84"
+    };
 
-        navigator.geolocation.watchPosition(checkArea);
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-        window.sendMessage = async function () {
-            if (!inside) return;
+    const centerLat = 40.61581525171119;
+    const centerLng = 15.047397231044794;
+    const radius = 15;
 
-            const msg = document.getElementById("message").value;
-            if (msg.trim() === "") return;
+    let inside = false;
 
-            await addDoc(collection(db, "messages"), {
-                text: msg,
-                time: Date.now()
-            });
+    function checkArea(position) {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      const distance = getDistance(lat, lng, centerLat, centerLng);
 
-            document.getElementById("message").value = "";
-        }
+      document.getElementById("distanceText").innerText = distance.toFixed(2) + " m";
 
-        const q = query(collection(db, "messages"), orderBy("time"));
+      if (distance <= radius) {
+        inside = true;
+        document.getElementById("dot").classList.add("ok");
+        document.getElementById("statusText").innerText = "SEI DENTRO L’AREA";
+        document.getElementById("subStatus").innerText = "Chat attiva";
+        document.getElementById("chat").style.display = "block";
+        document.getElementById("locked").style.display = "none";
+        document.getElementById("chatBadge").innerText = "Online";
+      } else {
+        inside = false;
+        document.getElementById("dot").classList.remove("ok");
+        document.getElementById("statusText").innerText = "SEI FUORI AREA";
+        document.getElementById("subStatus").innerText = "Chat bloccata";
+        document.getElementById("chat").style.display = "none";
+        document.getElementById("locked").style.display = "block";
+        document.getElementById("chatBadge").innerText = "Bloccata";
+      }
+    }
 
-        onSnapshot(q, (snapshot) => {
-            const container = document.getElementById("messages");
-            container.innerHTML = "";
+    function gpsError() {
+      document.getElementById("statusText").innerText = "GPS non disponibile";
+      document.getElementById("subStatus").innerText = "Controlla i permessi posizione";
+    }
 
-            snapshot.forEach(doc => {
-                const div = document.createElement("div");
-                div.innerText = doc.data().text;
-                container.appendChild(div);
-            });
-        });
-    </script>
+    function getDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371000;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
 
+      const a =
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI/180) *
+        Math.cos(lat2 * Math.PI/180) *
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    navigator.geolocation.watchPosition(checkArea, gpsError, {
+      enableHighAccuracy: true,
+      maximumAge: 3000,
+      timeout: 10000
+    });
+
+    window.sendMessage = async function () {
+      if (!inside) return;
+
+      const input = document.getElementById("message");
+      const msg = input.value.trim();
+
+      if (msg === "") return;
+
+      await addDoc(collection(db, "messages"), {
+        text: msg,
+        time: Date.now()
+      });
+
+      input.value = "";
+    }
+
+    const q = query(collection(db, "messages"), orderBy("time"));
+
+    onSnapshot(q, (snapshot) => {
+      const container = document.getElementById("messages");
+      container.innerHTML = "";
+
+      snapshot.forEach(doc => {
+        const div = document.createElement("div");
+        div.className = "message";
+        div.innerHTML = `
+          <div class="name">Utente</div>
+          <div class="text">${escapeHtml(doc.data().text)}</div>
+        `;
+        container.appendChild(div);
+      });
+
+      container.scrollTop = container.scrollHeight;
+    });
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.innerText = text;
+      return div.innerHTML;
+    }
+  </script>
+
+  <script>
+    function toggleTheme() {
+      document.body.classList.toggle("dark");
+
+      const dark = document.body.classList.contains("dark");
+      localStorage.setItem("theme", dark ? "dark" : "light");
+      document.getElementById("themeBtn").innerText = dark ? "☀️" : "🌙";
+    }
+
+    if (localStorage.getItem("theme") === "dark") {
+      document.body.classList.add("dark");
+      document.getElementById("themeBtn").innerText = "☀️";
+    }
+  </script>
 </body>
 </html>
