@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>GeoChat Test</title>
+    <title>GeoChat</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+
     <style>
         body {
             font-family: Arial;
             text-align: center;
-            padding: 50px;
+            padding: 30px;
             background: #111;
             color: white;
         }
@@ -20,11 +20,35 @@
             border: none;
             border-radius: 10px;
             cursor: pointer;
+            margin-top: 10px;
         }
 
         #status {
             margin-top: 20px;
             font-size: 20px;
+        }
+
+        #chat {
+            margin-top: 30px;
+        }
+
+        input {
+            padding: 10px;
+            width: 70%;
+            border-radius: 8px;
+            border: none;
+        }
+
+        #messages {
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        #messages div {
+            background: #222;
+            padding: 10px;
+            margin-top: 5px;
+            border-radius: 8px;
         }
     </style>
 </head>
@@ -32,60 +56,85 @@
 <body>
 
     <h1>📡 GeoChat</h1>
-    <p>Test posizione GPS</p>
+    <p>Accesso solo dentro l’area</p>
 
     <button onclick="getLocation()">Controlla posizione</button>
 
     <div id="status">Premi il bottone</div>
 
+    <div id="chat" style="display:none;">
+        <h2>💬 Chat Area</h2>
+        <input id="message" placeholder="Scrivi..." />
+        <br>
+        <button onclick="sendMessage()">Invia</button>
+        <div id="messages"></div>
+    </div>
+
     <script>
-    const centerLat = 40.61581525171119;
-    const centerLng = 15.047397231044794;
-    const radius = 15; // metri
+        const centerLat = 40.61581525171119;
+        const centerLng = 15.047397231044794;
+        const radius = 15;
 
-    function getLocation() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(checkArea, error);
-        } else {
-            document.getElementById("status").innerText = "GPS non supportato";
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(checkArea, error);
+            } else {
+                document.getElementById("status").innerText = "GPS non supportato";
+            }
         }
-    }
 
-    function checkArea(position) {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
+        function checkArea(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
 
-        const distance = getDistance(lat, lng, centerLat, centerLng);
+            const distance = getDistance(lat, lng, centerLat, centerLng);
 
-        if (distance <= radius) {
-            document.getElementById("status").innerText =
-                "✅ SEI DENTRO L'AREA (" + distance.toFixed(2) + "m)";
-        } else {
-            document.getElementById("status").innerText =
-                "❌ SEI FUORI (" + distance.toFixed(2) + "m)";
+            if (distance <= radius) {
+                document.getElementById("status").innerText =
+                    "✅ SEI DENTRO L'AREA (" + distance.toFixed(2) + "m)";
+                
+                document.getElementById("chat").style.display = "block";
+            } else {
+                document.getElementById("status").innerText =
+                    "❌ SEI FUORI (" + distance.toFixed(2) + "m)";
+                
+                document.getElementById("chat").style.display = "none";
+            }
         }
-    }
 
-    function error() {
-        document.getElementById("status").innerText =
-            "Errore nel prendere la posizione";
-    }
+        function error() {
+            document.getElementById("status").innerText =
+                "Errore nel prendere la posizione";
+        }
 
-    function getDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371000; // metri
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371000;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
 
-        const a =
-            Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1 * Math.PI/180) *
-            Math.cos(lat2 * Math.PI/180) *
-            Math.sin(dLon/2) * Math.sin(dLon/2);
+            const a =
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI/180) *
+                Math.cos(lat2 * Math.PI/180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
 
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return R * c;
-    }
-</script>
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        function sendMessage() {
+            const msg = document.getElementById("message").value;
+
+            if (msg.trim() === "") return;
+
+            const div = document.createElement("div");
+            div.innerText = msg;
+
+            document.getElementById("messages").appendChild(div);
+
+            document.getElementById("message").value = "";
+        }
+    </script>
 
 </body>
 </html>
