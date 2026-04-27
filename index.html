@@ -58,9 +58,7 @@
     <h1>📡 GeoChat</h1>
     <p>Chat attiva solo dentro area</p>
 
-    <button onclick="getLocation()">Controlla posizione</button>
-
-    <div id="status">Premi il bottone</div>
+    <div id="status">Caricamento posizione...</div>
 
     <div id="chat" style="display:none;">
         <h2>💬 Chat Area</h2>
@@ -70,7 +68,6 @@
         <div id="messages"></div>
     </div>
 
-    <!-- FIREBASE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } 
@@ -93,10 +90,6 @@
         const radius = 15;
 
         let inside = false;
-
-        window.getLocation = function () {
-            navigator.geolocation.getCurrentPosition(checkArea);
-        }
 
         function checkArea(position) {
             const lat = position.coords.latitude;
@@ -131,6 +124,8 @@
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
             return R * c;
         }
+
+        navigator.geolocation.watchPosition(checkArea);
 
         window.sendMessage = async function () {
             if (!inside) return;
