@@ -42,9 +42,11 @@ overflow-x:hidden;
 .dot.ok{background:#22c55e;box-shadow:0 0 14px #22c55e}
 .distance{font-family:Orbitron;font-size:40px;font-weight:800;margin-top:14px;color:var(--deep-orange);text-shadow:0 0 22px var(--glow)}
 .sub{color:var(--muted);margin-top:6px;font-size:14px}
-.chat-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.chat-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px}
 .chat-title{font-family:Orbitron;font-size:19px;font-weight:800}
-.badge{padding:8px 11px;border-radius:999px;background:rgba(255,140,66,.16);color:var(--deep-orange);font-size:12px;font-weight:800}
+.badges{display:flex;gap:8px;align-items:center}
+.badge{padding:8px 11px;border-radius:999px;background:rgba(255,140,66,.16);color:var(--deep-orange);font-size:12px;font-weight:800;white-space:nowrap}
+.online-badge{background:rgba(34,197,94,.14);color:#22c55e}
 #locked{text-align:center;color:var(--muted);padding:28px 8px;font-weight:600}
 #chat{display:none}
 #messages{display:flex;flex-direction:column;gap:10px;max-height:360px;overflow-y:auto;padding-right:4px;margin-bottom:15px}
@@ -95,7 +97,10 @@ body.light input{background:rgba(255,255,255,.8)}
 <div class="panel">
 <div class="chat-top">
 <div class="chat-title">CHAT ZONA</div>
+<div class="badges">
+<div class="badge online-badge" id="onlineBadge">👥 0</div>
 <div class="badge" id="chatBadge">LOCKED</div>
+</div>
 </div>
 
 <div id="locked">🔒 Accesso consentito solo dentro l’area.</div>
@@ -131,7 +136,7 @@ body.light input{background:rgba(255,255,255,.8)}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, setDoc, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig={
 apiKey:"AIzaSyD7cztFTFUz_zSiGeBbibzERV14KpKNhQw",
@@ -150,6 +155,14 @@ const centerLng=15.047397231044794;
 const radius=15;
 
 let inside=false;
+let lastPresenceInside=null;
+
+let userId=localStorage.getItem("geochat_user_id");
+if(!userId){
+userId="user_"+Date.now()+"_"+Math.floor(Math.random()*999999);
+localStorage.setItem("geochat_user_id",userId);
+}
+
 let profile={
 name:localStorage.getItem("geochat_name")||"",
 avatar:localStorage.getItem("geochat_avatar")||""
@@ -184,7 +197,7 @@ document.getElementById("profileModal").style.display="none";
 }
 };
 
-window.saveProfile=function(){
+window.saveProfile=async function(){
 const name=nicknameInput.value.trim();
 if(name.length<2){
 alert("Scegli un nickname di almeno 2 caratteri");
@@ -195,6 +208,7 @@ localStorage.setItem("geochat_name",profile.name);
 localStorage.setItem("geochat_avatar",profile.avatar||"");
 refreshProfileUI();
 document.getElementById("profileModal").style.display="none";
+await updatePresence();
 };
 
 document.getElementById("avatarFile").addEventListener("change",function(){
@@ -249,6 +263,8 @@ document.getElementById("chat").style.display="none";
 document.getElementById("locked").style.display="block";
 document.getElementById("chatBadge").innerText="LOCKED";
 }
+
+updatePresence();
 }
 
 function gpsError(){
@@ -263,6 +279,26 @@ const dLon=(lon2-lon1)*Math.PI/180;
 const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
 return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
+
+async function updatePresence(){
+try{
+await setDoc(doc(db,"presence",userId),{
+name:profile.name||"",
+inside:inside,
+lastSeen:Date.now()
+});
+lastPresenceInside=inside;
+}catch(e){
+console.log("presence error",e);
+}
+}
+
+setInterval(updatePresence,15000);
+
+window.addEventListener("pagehide",function(){
+inside=false;
+updatePresence();
+});
 
 navigator.geolocation.watchPosition(checkArea,gpsError,{enableHighAccuracy:true,maximumAge:3000,timeout:10000});
 
@@ -289,9 +325,9 @@ time:Date.now()
 input.value="";
 };
 
-const q=query(collection(db,"messages"),orderBy("time"));
+const messagesQuery=query(collection(db,"messages"),orderBy("time"));
 
-onSnapshot(q,(snapshot)=>{
+onSnapshot(messagesQuery,(snapshot)=>{
 const container=document.getElementById("messages");
 container.innerHTML="";
 
@@ -316,6 +352,22 @@ container.appendChild(div);
 });
 
 container.scrollTop=container.scrollHeight;
+});
+
+const presenceQuery=query(collection(db,"presence"),where("inside","==",true));
+
+onSnapshot(presenceQuery,(snapshot)=>{
+const now=Date.now();
+let count=0;
+
+snapshot.forEach(doc=>{
+const data=doc.data();
+if(data.lastSeen && now-data.lastSeen<45000){
+count++;
+}
+});
+
+document.getElementById("onlineBadge").innerText="👥 "+count;
 });
 
 function escapeHtml(text){
