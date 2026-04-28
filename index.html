@@ -5,7 +5,6 @@
 <title>GeoChat Pulse</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
 <style>
 :root{
@@ -25,7 +24,7 @@ radial-gradient(circle at 90% 20%,rgba(78,89,140,.45),transparent 35%),var(--bg)
 overflow-x:hidden;
 }
 .grid-bg{position:fixed;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:42px 42px;pointer-events:none}
-.app{max-width:500px;min-height:100vh;margin:0 auto;padding:22px 22px 92px;position:relative;z-index:1}
+.app{max-width:500px;min-height:100vh;margin:0 auto;padding:22px;position:relative;z-index:1}
 .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
 .brand{font-family:Orbitron;font-size:24px;font-weight:800;display:flex;gap:10px;align-items:center}
 .brand-icon{width:38px;height:38px;border-radius:14px;background:linear-gradient(135deg,var(--deep-orange),var(--orange));display:grid;place-items:center;box-shadow:0 0 28px var(--glow)}
@@ -97,8 +96,6 @@ body.light input{background:rgba(255,255,255,.8)}
 .admin-section{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
 .admin-label{font-size:12px;font-weight:800;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.7px}
 .admin-input{width:100%;min-height:72px;resize:vertical;border:1px solid var(--line);background:rgba(255,255,255,.07);color:var(--text);padding:12px;border-radius:16px;outline:none;font-size:14px;font-family:Inter,Arial,sans-serif}
-.admin-number{width:100%;border:1px solid var(--line);background:rgba(255,255,255,.07);color:var(--text);padding:12px;border-radius:16px;outline:none;font-size:14px;font-family:Inter,Arial,sans-serif}
-.admin-status{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4}
 .admin-user-list{display:flex;flex-direction:column;gap:8px;margin-top:10px;max-height:220px;overflow:auto}
 .admin-user{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bubble);border:1px solid var(--line);border-radius:16px;padding:10px}
 .admin-user-main{min-width:0;text-align:left}
@@ -110,23 +107,6 @@ body.light input{background:rgba(255,255,255,.8)}
 .pinned-banner b{color:var(--deep-orange);font-family:Orbitron;font-size:12px;margin-right:6px}
 .delete-msg-btn{margin-top:6px;border:none;border-radius:999px;background:rgba(255,77,77,.92);color:white;font-size:10px;font-weight:800;padding:5px 8px;cursor:pointer}
 .message-row.me .delete-msg-btn{background:rgba(255,255,255,.24)}
-
-.page{display:none}
-.page.active{display:block}
-.bottom-nav{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);width:min(460px,calc(100% - 28px));z-index:80;display:flex;gap:8px;padding:10px;border:1px solid var(--line);border-radius:24px;background:rgba(14,18,38,.86);backdrop-filter:blur(18px);box-shadow:0 20px 60px rgba(0,0,0,.4)}
-body.light .bottom-nav{background:rgba(255,255,255,.88)}
-.nav-btn{flex:1;border:none;background:transparent;color:var(--muted);font-weight:800;border-radius:18px;padding:10px 6px;cursor:pointer;font-size:12px}
-.nav-btn.active{background:rgba(255,140,66,.18);color:var(--deep-orange)}
-.admin-only{display:none}
-.page-title{font-family:Orbitron;font-size:19px;font-weight:800}
-#map{height:420px;border-radius:24px;overflow:hidden;border:1px solid var(--line);margin-top:14px;background:#111}
-.map-info{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
-.info-box{background:var(--bubble);border:1px solid var(--line);border-radius:18px;padding:12px}
-.info-label{font-size:11px;color:var(--muted);font-weight:800;text-transform:uppercase}
-.info-value{font-weight:800;margin-top:4px;word-break:break-word}
-.profile-card{text-align:center}
-.profile-email{color:var(--muted);font-size:13px;margin-top:8px;word-break:break-all}
-.leaflet-container{font-family:Inter,Arial,sans-serif}
 @keyframes scan{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 @keyframes pulse{0%,100%{transform:scale(.96);opacity:.5}50%{transform:scale(1.05);opacity:1}}
 @keyframes pop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
@@ -160,12 +140,11 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 <div class="brand"><div class="brand-icon">📡</div>GeoChat</div>
 <div class="top-actions">
 <button class="logout-btn" onclick="logout()">Logout</button>
-<button class="profile-btn" onclick="showPage('profile')" id="profileBtn">?</button>
+<button class="profile-btn" onclick="openProfile()" id="profileBtn">?</button>
 <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">☀️</button>
 </div>
 </div>
 
-<section id="page-chat" class="page active">
 <div class="panel hero">
 <div class="radar-wrap"><div class="radar"></div></div>
 <div class="status-pill"><span id="dot" class="dot"></span><span id="statusText">SCANSIONE AREA...</span></div>
@@ -199,44 +178,7 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 </div>
 </div>
 </div>
-</section>
 
-<section id="page-map" class="page">
-<div class="panel">
-<div class="page-title">🗺️ MAPPA ZONA</div>
-<div class="sub">Qui vedi l’area attiva, il raggio e la tua posizione.</div>
-<div id="map"></div>
-<div class="map-info">
-<div class="info-box"><div class="info-label">Modalità</div><div class="info-value" id="areaModeText">Raggio</div></div>
-<div class="info-box"><div class="info-label">Raggio</div><div class="info-value" id="radiusText">-- m</div></div>
-<div class="info-box"><div class="info-label">Centro</div><div class="info-value" id="centerText">--</div></div>
-<div class="info-box"><div class="info-label">Stato</div><div class="info-value" id="mapStatusText">--</div></div>
-</div>
-</div>
-
-<div class="panel admin-panel admin-only" id="mapAdminPanel">
-<div class="admin-title">🎛 Gestione area</div>
-<div class="admin-sub">Modifica il raggio e salva la tua posizione attuale come centro area.</div>
-<input class="admin-number" id="adminRadiusInput" type="number" min="1" step="1" placeholder="Raggio in metri" />
-<div class="admin-grid" style="margin-top:10px">
-<button class="admin-btn secondary" onclick="saveAdminRadius()">💾 Salva raggio</button>
-<button class="admin-btn" onclick="saveCurrentCenter()">📍 Usa mia posizione</button>
-</div>
-<div class="admin-status" id="areaAdminStatus">Area: caricamento...</div>
-</div>
-</section>
-
-<section id="page-profile" class="page">
-<div class="panel profile-card">
-<div class="big-avatar" id="profilePageAvatar">?</div>
-<div class="page-title" id="profilePageName">Profilo</div>
-<div class="profile-email" id="profileEmail"></div>
-<button class="save-btn" onclick="openProfile()">Modifica profilo</button>
-<button class="ghost-btn" onclick="logout()">Logout</button>
-</div>
-</section>
-
-<section id="page-admin" class="page admin-only">
 <div class="panel admin-panel" id="adminPanel">
 <div class="admin-title">👑 ADMIN PANEL</div>
 <div class="admin-sub">Controlli visibili solo all’admin.</div>
@@ -260,18 +202,16 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 <div class="admin-sub">Puoi bannare o sbloccare utenti presenti nella zona.</div>
 <div class="admin-user-list" id="adminUsersList"></div>
 </div>
+
+<div class="admin-section">
+<div class="admin-label">🚫 Utenti bannati</div>
+<div class="admin-sub">Qui trovi anche chi non è più online, così puoi sbloccarlo quando vuoi.</div>
+<div class="admin-user-list" id="adminBannedList"></div>
 </div>
-</section>
+</div>
 
 <div class="footer">GEOCHAT SYSTEM · POSITION BASED ACCESS</div>
 </div>
-
-<nav class="bottom-nav">
-<button id="nav-chat" class="nav-btn active" onclick="showPage('chat')">💬<br>Chat</button>
-<button id="nav-map" class="nav-btn" onclick="showPage('map')">🗺️<br>Mappa</button>
-<button id="nav-profile" class="nav-btn" onclick="showPage('profile')">👤<br>Profilo</button>
-<button id="nav-admin" class="nav-btn admin-only" onclick="showPage('admin')">👑<br>Admin</button>
-</nav>
 
 <div class="modal" id="profileModal">
 <div class="modal-card">
@@ -290,7 +230,6 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { 
@@ -319,15 +258,9 @@ let isAdmin=false;
 const notifyAudio=new Audio("notifica.mp3");
 notifyAudio.preload="auto";
 
-const DEFAULT_CENTER_LAT=40.61581525171119;
-const DEFAULT_CENTER_LNG=15.047397231044794;
-const DEFAULT_RADIUS=15;
-
-let areaCenterLat=DEFAULT_CENTER_LAT;
-let areaCenterLng=DEFAULT_CENTER_LNG;
-let areaRadius=DEFAULT_RADIUS;
-let latestUserLat=null;
-let latestUserLng=null;
+const centerLat=40.61581525171119;
+const centerLng=15.047397231044794;
+const radius=15;
 
 let currentUser=null;
 let userId=null;
@@ -343,9 +276,7 @@ let unsubscribeBans=null;
 let isBanned=false;
 let latestOnlineUsers=[];
 let activeBans={};
-let map=null;
-let userMarker=null;
-let areaCircle=null;
+let activeBanUsers=[];
 
 let soundEnabled=localStorage.getItem("geochat_sound")==="true";
 let vibrationEnabled=localStorage.getItem("geochat_vibration")==="true";
@@ -396,7 +327,6 @@ if(user){
 currentUser=user;
 userId=user.uid;
 isAdmin=(userId===ADMIN_UID);
-document.querySelectorAll(".admin-only").forEach(el=>el.style.display=isAdmin?"block":"none");
 document.getElementById("adminPanel").style.display=isAdmin?"block":"none";
 document.getElementById("authScreen").style.display="none";
 await loadProfile();
@@ -409,6 +339,7 @@ isAdmin=false;
 isBanned=false;
 latestOnlineUsers=[];
 activeBans={};
+activeBanUsers=[];
 if(unsubscribeMessages) unsubscribeMessages();
 if(unsubscribePresence) unsubscribePresence();
 if(unsubscribePinned) unsubscribePinned();
@@ -417,7 +348,6 @@ if(unsubscribeBans) unsubscribeBans();
 if(unsubscribePinned) unsubscribePinned();
 if(unsubscribeOwnBan) unsubscribeOwnBan();
 if(unsubscribeBans) unsubscribeBans();
-document.querySelectorAll(".admin-only").forEach(el=>el.style.display="none");
 document.getElementById("adminPanel").style.display="none";
 document.getElementById("authScreen").style.display="flex";
 }
@@ -484,22 +414,15 @@ if(navigator.vibrate) navigator.vibrate([120,60,120]);
 function refreshProfileUI(){
 const btn=document.getElementById("profileBtn");
 const big=document.getElementById("bigAvatar");
-const pageAvatar=document.getElementById("profilePageAvatar");
 
 if(profile.avatar){
 btn.innerHTML=`<img src="${profile.avatar}">`;
 big.innerHTML=`<img src="${profile.avatar}">`;
-if(pageAvatar) pageAvatar.innerHTML=`<img src="${profile.avatar}">`;
 }else{
 const letter=profile.name?profile.name[0].toUpperCase():"?";
 btn.innerText=letter;
 big.innerText=letter;
-if(pageAvatar) pageAvatar.innerText=letter;
 }
-const pageName=document.getElementById("profilePageName");
-const profileEmail=document.getElementById("profileEmail");
-if(pageName) pageName.innerText=profile.name||"Profilo";
-if(profileEmail && currentUser) profileEmail.innerText=currentUser.email||"Account Google";
 }
 
 window.openProfile=function(){
@@ -564,15 +487,12 @@ img.src=src;
 function checkArea(position){
 const lat=position.coords.latitude;
 const lng=position.coords.longitude;
-latestUserLat=lat;
-latestUserLng=lng;
-const distance=getDistance(lat,lng,areaCenterLat,areaCenterLng);
+const distance=getDistance(lat,lng,centerLat,centerLng);
 
 document.getElementById("distanceText").innerText=distance.toFixed(2)+" m";
 
-inside = distance <= areaRadius;
+inside = distance <= radius;
 renderAccessState();
-updateMap();
 updatePresence();
 }
 
@@ -585,7 +505,6 @@ document.getElementById("chat").style.display="none";
 document.getElementById("locked").style.display="block";
 document.getElementById("locked").innerText="🚫 Sei stato bannato da questa zona.";
 document.getElementById("chatBadge").innerText="BANNED";
-const mst=document.getElementById("mapStatusText"); if(mst) mst.innerText="Bannato";
 return;
 }
 
@@ -598,7 +517,6 @@ document.getElementById("subStatus").innerText="Sei dentro il perimetro";
 document.getElementById("chat").style.display="block";
 document.getElementById("locked").style.display="none";
 document.getElementById("chatBadge").innerText="LIVE";
-const mst=document.getElementById("mapStatusText"); if(mst) mst.innerText="Dentro";
 }else{
 document.getElementById("dot").classList.remove("ok");
 document.getElementById("statusText").innerText="FUORI AREA";
@@ -606,7 +524,6 @@ document.getElementById("subStatus").innerText="Avvicinati alla zona attiva";
 document.getElementById("chat").style.display="none";
 document.getElementById("locked").style.display="block";
 document.getElementById("chatBadge").innerText="LOCKED";
-const mst=document.getElementById("mapStatusText"); if(mst) mst.innerText="Fuori";
 }
 }
 
@@ -713,7 +630,7 @@ bannedBy:userId
 
 window.unbanUser=async function(uid){
 if(!isAdmin)return;
-const target=latestOnlineUsers.find(u=>u.uid===uid);
+const target=latestOnlineUsers.find(u=>u.uid===uid) || activeBanUsers.find(u=>u.uid===uid);
 const name=target?target.name:"Utente";
 if(!confirm("Sbloccare " + (name || uid) + "?"))return;
 await setDoc(doc(db,"bans",uid),{
@@ -723,46 +640,6 @@ unbannedAt:Date.now(),
 unbannedBy:userId
 },{merge:true});
 };
-
-window.saveAdminRadius=async function(){
-if(!isAdmin)return;
-const value=Number(document.getElementById("adminRadiusInput").value);
-if(!value || value<1){
-alert("Inserisci un raggio valido in metri");
-return;
-}
-await setDoc(doc(db,"appConfig","main"),{
-areaRadius:value,
-updatedAt:Date.now(),
-updatedBy:userId
-},{merge:true});
-};
-
-window.saveCurrentCenter=async function(){
-if(!isAdmin)return;
-if(latestUserLat===null || latestUserLng===null){
-alert("Aspetta che il GPS trovi la tua posizione");
-return;
-}
-if(!confirm("Impostare la tua posizione attuale come nuovo centro area?"))return;
-await setDoc(doc(db,"appConfig","main"),{
-areaCenterLat:latestUserLat,
-areaCenterLng:latestUserLng,
-updatedAt:Date.now(),
-updatedBy:userId
-},{merge:true});
-};
-
-function refreshAreaAdminUI(){
-const radiusInput=document.getElementById("adminRadiusInput");
-const status=document.getElementById("areaAdminStatus");
-if(radiusInput) radiusInput.value=areaRadius;
-if(status) status.innerText=`Area: raggio ${areaRadius}m · centro ${areaCenterLat.toFixed(6)}, ${areaCenterLng.toFixed(6)}`;
-const rText=document.getElementById("radiusText"); if(rText) rText.innerText=areaRadius+" m";
-const cText=document.getElementById("centerText"); if(cText) cText.innerText=areaCenterLat.toFixed(5)+", "+areaCenterLng.toFixed(5);
-const modeText=document.getElementById("areaModeText"); if(modeText) modeText.innerText="Raggio";
-}
-
 
 window.savePinnedMessage=async function(){
 if(!isAdmin)return;
@@ -809,6 +686,31 @@ box.appendChild(row);
 });
 }
 
+
+function renderAdminBannedUsers(){
+if(!isAdmin)return;
+const box=document.getElementById("adminBannedList");
+if(!box)return;
+if(activeBanUsers.length===0){
+box.innerHTML=`<div class="admin-sub">Nessun utente bannato.</div>`;
+return;
+}
+box.innerHTML="";
+activeBanUsers.forEach(u=>{
+const safeName=escapeHtml(u.name||"Utente");
+const row=document.createElement("div");
+row.className="admin-user";
+row.innerHTML=`
+<div class="admin-user-main">
+<div class="admin-user-name">${safeName}</div>
+<div class="admin-user-id">${u.uid}</div>
+</div>
+<button class="admin-mini-btn unban" onclick="unbanUser('${u.uid}')">Sblocca</button>
+`;
+box.appendChild(row);
+});
+}
+
 function startListeners(){
 if(unsubscribeMessages) unsubscribeMessages();
 if(unsubscribePresence) unsubscribePresence();
@@ -818,18 +720,6 @@ if(unsubscribeBans) unsubscribeBans();
 
 unsubscribePinned=onSnapshot(doc(db,"appConfig","main"),(snap)=>{
 const data=snap.exists()?snap.data():{};
-if(typeof data.areaCenterLat==="number") areaCenterLat=data.areaCenterLat;
-if(typeof data.areaCenterLng==="number") areaCenterLng=data.areaCenterLng;
-if(typeof data.areaRadius==="number") areaRadius=data.areaRadius;
-refreshAreaAdminUI();
-updateMap();
-if(latestUserLat!==null && latestUserLng!==null){
-const distance=getDistance(latestUserLat,latestUserLng,areaCenterLat,areaCenterLng);
-inside = distance <= areaRadius;
-document.getElementById("distanceText").innerText=distance.toFixed(2)+" m";
-renderAccessState();
-updatePresence();
-}
 const text=(data.pinnedText||"").trim();
 const banner=document.getElementById("pinnedBanner");
 if(text){
@@ -853,8 +743,18 @@ updatePresence();
 if(isAdmin){
 unsubscribeBans=onSnapshot(collection(db,"bans"),(snap)=>{
 activeBans={};
-snap.forEach(d=>{activeBans[d.id]=d.data().active===true;});
+activeBanUsers=[];
+snap.forEach(d=>{
+const data=d.data();
+const active=data.active===true;
+activeBans[d.id]=active;
+if(active){
+activeBanUsers.push({uid:d.id,name:data.name||"Utente",bannedAt:data.bannedAt||0});
+}
+});
+activeBanUsers.sort((a,b)=>(b.bannedAt||0)-(a.bannedAt||0));
 renderAdminUsers();
+renderAdminBannedUsers();
 });
 }
 
@@ -922,52 +822,8 @@ latestOnlineUsers.push({uid:docSnap.id,name:data.name||"Utente",lastSeen:data.la
 
 document.getElementById("onlineBadge").innerText="👥 "+count;
 renderAdminUsers();
+renderAdminBannedUsers();
 });
-}
-
-
-window.showPage=function(page){
-document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
-document.querySelectorAll('.nav-btn').forEach(el=>el.classList.remove('active'));
-const target=document.getElementById('page-'+page);
-const nav=document.getElementById('nav-'+page);
-if(target) target.classList.add('active');
-if(nav) nav.classList.add('active');
-if(page==='map'){
-setTimeout(()=>{initMap();updateMap();},120);
-}
-};
-
-function initMap(){
-if(map || typeof L==='undefined') return;
-map=L.map('map',{zoomControl:true});
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
-map.setView([areaCenterLat,areaCenterLng],15);
-updateMap();
-}
-
-function updateMap(){
-refreshAreaAdminUI();
-if(!map || typeof L==='undefined') return;
-const center=[areaCenterLat,areaCenterLng];
-if(!areaCircle){
-areaCircle=L.circle(center,{radius:areaRadius,color:'#FF8C42',fillColor:'#FF8C42',fillOpacity:0.18,weight:2}).addTo(map);
-}else{
-areaCircle.setLatLng(center);
-areaCircle.setRadius(areaRadius);
-}
-if(latestUserLat!==null && latestUserLng!==null){
-const pos=[latestUserLat,latestUserLng];
-if(!userMarker){
-userMarker=L.marker(pos).addTo(map).bindPopup('La tua posizione');
-}else{
-userMarker.setLatLng(pos);
-}
-const group=L.featureGroup([areaCircle,userMarker]);
-map.fitBounds(group.getBounds().pad(0.25));
-}else{
-map.setView(center,14);
-}
 }
 
 function escapeHtml(text){
@@ -977,7 +833,6 @@ return div.innerHTML;
 }
 
 refreshSettingsUI();
-refreshAreaAdminUI();
 </script>
 
 <script>
