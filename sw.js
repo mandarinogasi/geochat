@@ -1,28 +1,29 @@
-importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js");
-importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js");
+// Service Worker BASE (senza push, stabile)
 
-firebase.initializeApp({
-  apiKey: "AIzaSyD7cztFTFUz_zSiGeBbibzERV14KpKNhQw",
-  authDomain: "geochat-51d5c.firebaseapp.com",
-  projectId: "geochat-51d5c",
-  messagingSenderId: "663629006541",
-  appId: "1:663629006541:web:0fda395d92f15fb7c4cb84"
+self.addEventListener('install', (event) => {
+  console.log('SW installato');
+  self.skipWaiting();
 });
 
-const messaging = firebase.messaging();
-
-messaging.onBackgroundMessage((payload) => {
-  const title = payload.notification?.title || "GeoChat";
-  const options = {
-    body: payload.notification?.body || "",
-    icon: "/icon-192.png",
-    badge: "/icon-192.png"
-  };
-
-  self.registration.showNotification(title, options);
+self.addEventListener('activate', (event) => {
+  console.log('SW attivo');
+  event.waitUntil(self.clients.claim());
 });
 
-self.addEventListener("notificationclick", (event) => {
+// Apri app quando clicchi una notifica (se mai usata in futuro)
+self.addEventListener('notificationclick', function(event) {
   event.notification.close();
-  event.waitUntil(clients.openWindow("/"));
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then(function(clientList) {
+      for (let i = 0; i < clientList.length; i++) {
+        let client = clientList[i];
+        if (client.url && "focus" in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow("/");
+      }
+    })
+  );
 });
