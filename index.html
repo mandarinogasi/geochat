@@ -175,7 +175,7 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 
 <div class="panel">
 <div class="chat-top">
-<div class="chat-title">CHAT ZONA</div>
+<div class="chat-title" id="chatTitle">CHAT ZONA</div>
 <div class="badges">
 <div class="badge online-badge" id="onlineBadge">👥 0</div>
 <div class="badge" id="chatBadge">LOCKED</div>
@@ -217,12 +217,24 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 <div class="panel admin-panel admin-only" id="mapAdminPanel">
 <div class="admin-title">🎛 Gestione area</div>
 <div class="admin-sub">Modifica il raggio e salva la tua posizione attuale come centro area.</div>
-<input class="admin-number" id="adminRadiusInput" type="number" min="1" step="1" placeholder="Raggio in metri" />
+<input class="admin-number" id="adminRadiusInput" type="number" min="0" step="1" placeholder="Raggio in metri" />
 <div class="admin-grid" style="margin-top:10px">
 <button class="admin-btn secondary" onclick="saveAdminRadius()">💾 Salva raggio</button>
 <button class="admin-btn" onclick="saveCurrentCenter()">📍 Usa mia posizione</button>
 </div>
 <div class="admin-status" id="areaAdminStatus">Area: caricamento...</div>
+<div class="admin-grid" style="margin-top:10px">
+<button class="admin-btn" onclick="closeMainArea()">🛑 Chiudi raggio</button>
+<button class="admin-btn secondary" onclick="saveAdminRadius()">✅ Riattiva</button>
+</div>
+
+<div class="admin-section">
+<div class="admin-label">➕ Crea nuova area raggio</div>
+<div class="admin-sub">Usa la tua posizione attuale come centro e crea una chat separata.</div>
+<input class="admin-number" id="newAreaNameInput" type="text" placeholder="Nome area es. Piazza Centro" />
+<input class="admin-number" id="newAreaRadiusInput" type="number" min="1" step="1" placeholder="Raggio in metri" style="margin-top:10px" />
+<button class="save-btn" onclick="createRadiusArea()">➕ Crea area</button>
+</div>
 </div>
 </section>
 
@@ -265,6 +277,12 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 <div class="admin-label">🚫 Utenti bannati / sblocca</div>
 <div class="admin-sub">Qui restano visibili anche gli utenti bannati che non sono più online.</div>
 <div class="admin-user-list" id="bannedUsersList"></div>
+</div>
+
+<div class="admin-section">
+<div class="admin-label">🗺️ Aree personalizzate</div>
+<div class="admin-sub">Ogni area attiva ha la sua chat. Puoi attivare, disattivare o eliminare le aree.</div>
+<div class="admin-user-list" id="areasList"></div>
 </div>
 </div>
 </section>
@@ -333,6 +351,10 @@ let areaCenterLat=DEFAULT_CENTER_LAT;
 let areaCenterLng=DEFAULT_CENTER_LNG;
 let areaRadius=DEFAULT_RADIUS;
 let currentAreaId="main";
+let currentAreaName="Area principale";
+let customAreas=[];
+let latestMessageDocs=[];
+let customAreaCircles={};
 let latestUserLat=null;
 let latestUserLng=null;
 
@@ -347,6 +369,7 @@ let unsubscribePresence=null;
 let unsubscribePinned=null;
 let unsubscribeOwnBan=null;
 let unsubscribeBans=null;
+let unsubscribeAreas=null;
 let isBanned=false;
 let latestOnlineUsers=[];
 let activeBans={};
@@ -423,6 +446,7 @@ if(unsubscribePresence) unsubscribePresence();
 if(unsubscribePinned) unsubscribePinned();
 if(unsubscribeOwnBan) unsubscribeOwnBan();
 if(unsubscribeBans) unsubscribeBans();
+if(unsubscribeAreas) unsubscribeAreas();
 if(unsubscribePinned) unsubscribePinned();
 if(unsubscribeOwnBan) unsubscribeOwnBan();
 if(unsubscribeBans) unsubscribeBans();
@@ -575,17 +599,59 @@ const lat=position.coords.latitude;
 const lng=position.coords.longitude;
 latestUserLat=lat;
 latestUserLng=lng;
-const distance=getDistance(lat,lng,areaCenterLat,areaCenterLng);
-
-document.getElementById("distanceText").innerText=distance.toFixed(2)+" m";
-
-inside = distance <= areaRadius;
+updateCurrentAreaFromPosition();
 renderAccessState();
 updateMap();
 updatePresence();
 }
 
+function getAreaCandidates(lat,lng){
+const candidates=[];
+if(areaRadius>0){
+const distance=getDistance(lat,lng,areaCenterLat,areaCenterLng);
+if(distance<=areaRadius){
+candidates.push({id:"main",name:"Area principale",distance:distance,radius:areaRadius,centerLat:areaCenterLat,centerLng:areaCenterLng});
+}
+}
+customAreas.forEach(area=>{
+if(area.active!==true)return;
+if(area.type!=="radius")return;
+if(typeof area.centerLat!=="number" || typeof area.centerLng!=="number" || typeof area.radius!=="number")return;
+const distance=getDistance(lat,lng,area.centerLat,area.centerLng);
+if(distance<=area.radius){
+candidates.push({id:area.id,name:area.name||"Area",distance:distance,radius:area.radius,centerLat:area.centerLat,centerLng:area.centerLng});
+}
+});
+candidates.sort((a,b)=>a.distance-b.distance);
+return candidates;
+}
+
+function updateCurrentAreaFromPosition(){
+if(latestUserLat===null || latestUserLng===null)return;
+const candidates=getAreaCandidates(latestUserLat,latestUserLng);
+const previousAreaId=currentAreaId;
+if(candidates.length>0){
+const selected=candidates[0];
+currentAreaId=selected.id;
+currentAreaName=selected.name;
+inside=true;
+document.getElementById("distanceText").innerText=selected.distance.toFixed(2)+" m";
+}else{
+currentAreaId="main";
+currentAreaName="Area principale";
+inside=false;
+const distance=getDistance(latestUserLat,latestUserLng,areaCenterLat,areaCenterLng);
+document.getElementById("distanceText").innerText=distance.toFixed(2)+" m";
+}
+if(previousAreaId!==currentAreaId){
+firstSnapshot=true;
+renderMessages();
+}
+}
+
 function renderAccessState(){
+const title=document.getElementById("chatTitle");
+if(title) title.innerText=inside?"CHAT · "+currentAreaName:"CHAT ZONA";
 if(isBanned){
 document.getElementById("dot").classList.remove("ok");
 document.getElementById("statusText").innerText="UTENTE BANNATO";
@@ -677,6 +743,7 @@ name:profile.name,
 avatar:profile.avatar||"",
 userId:userId,
 areaId:currentAreaId,
+areaName:currentAreaName,
 time:Date.now()
 });
 
@@ -742,8 +809,8 @@ unbannedBy:userId
 window.saveAdminRadius=async function(){
 if(!isAdmin)return;
 const value=Number(document.getElementById("adminRadiusInput").value);
-if(!value || value<1){
-alert("Inserisci un raggio valido in metri");
+if(value<0 || Number.isNaN(value)){
+alert("Inserisci un raggio valido in metri. Usa 0 per chiudere il raggio principale.");
 return;
 }
 await setDoc(doc(db,"appConfig","main"),{
@@ -768,14 +835,64 @@ updatedBy:userId
 },{merge:true});
 };
 
+window.closeMainArea=async function(){
+if(!isAdmin)return;
+if(!confirm("Chiudere il raggio principale? La chat principale non sarà accessibile finché il raggio resta a 0."))return;
+await setDoc(doc(db,"appConfig","main"),{
+areaRadius:0,
+updatedAt:Date.now(),
+updatedBy:userId
+},{merge:true});
+};
+
+window.createRadiusArea=async function(){
+if(!isAdmin)return;
+if(latestUserLat===null || latestUserLng===null){
+alert("Aspetta che il GPS trovi la tua posizione");
+return;
+}
+const name=(document.getElementById("newAreaNameInput").value||"").trim();
+const radius=Number(document.getElementById("newAreaRadiusInput").value);
+if(name.length<2){alert("Scrivi un nome area");return;}
+if(!radius || radius<1){alert("Inserisci un raggio valido");return;}
+await addDoc(collection(db,"areas"),{
+name:name,
+type:"radius",
+active:true,
+centerLat:latestUserLat,
+centerLng:latestUserLng,
+radius:radius,
+createdAt:Date.now(),
+createdBy:userId
+});
+document.getElementById("newAreaNameInput").value="";
+document.getElementById("newAreaRadiusInput").value="";
+alert("Area creata");
+};
+
+window.toggleAreaActive=async function(areaId,active){
+if(!isAdmin)return;
+await setDoc(doc(db,"areas",areaId),{
+active:active,
+updatedAt:Date.now(),
+updatedBy:userId
+},{merge:true});
+};
+
+window.deleteArea=async function(areaId){
+if(!isAdmin)return;
+if(!confirm("Eliminare questa area? I vecchi messaggi di quell'area resteranno nel database ma l'area non sarà più visibile."))return;
+await deleteDoc(doc(db,"areas",areaId));
+};
+
 function refreshAreaAdminUI(){
 const radiusInput=document.getElementById("adminRadiusInput");
 const status=document.getElementById("areaAdminStatus");
 if(radiusInput) radiusInput.value=areaRadius;
-if(status) status.innerText=`Area: raggio ${areaRadius}m · centro ${areaCenterLat.toFixed(6)}, ${areaCenterLng.toFixed(6)}`;
+if(status) status.innerText=`Area principale: raggio ${areaRadius}m · centro ${areaCenterLat.toFixed(6)}, ${areaCenterLng.toFixed(6)} · chat attuale: ${currentAreaName}`;
 const rText=document.getElementById("radiusText"); if(rText) rText.innerText=areaRadius+" m";
 const cText=document.getElementById("centerText"); if(cText) cText.innerText=areaCenterLat.toFixed(5)+", "+areaCenterLng.toFixed(5);
-const modeText=document.getElementById("areaModeText"); if(modeText) modeText.innerText="Raggio";
+const modeText=document.getElementById("areaModeText"); if(modeText) modeText.innerText=currentAreaName;
 }
 
 
@@ -849,6 +966,73 @@ box.appendChild(row);
 });
 }
 
+function renderMessages(){
+const container=document.getElementById("messages");
+if(!container)return;
+container.innerHTML="";
+const docs=latestMessageDocs.filter(docSnap=>{
+const data=docSnap.data();
+return (data.areaId||"main")===currentAreaId;
+}).sort((a,b)=>{
+const ta=a.data().time||0;
+const tb=b.data().time||0;
+return ta-tb;
+});
+
+docs.forEach(docSnap=>{
+const data=docSnap.data();
+const messageId=docSnap.id;
+const safeName=escapeHtml(data.name||"Utente");
+const safeText=escapeHtml(data.text||"");
+const avatar=data.avatar||"";
+const isMe=data.userId===userId;
+
+const div=document.createElement("div");
+div.className=isMe?"message-row me":"message-row other";
+
+div.innerHTML=`
+<div class="msg-avatar">
+${avatar?`<img src="${avatar}">`:safeName[0].toUpperCase()}
+</div>
+<div class="message-bubble">
+<div class="name">${isMe?"TU":safeName}</div>
+<div class="text">${safeText}</div>
+${isAdmin?`<button class="delete-msg-btn" onclick="deleteMessage('${messageId}')">Elimina</button>`:""}
+</div>
+`;
+container.appendChild(div);
+});
+container.scrollTop=container.scrollHeight;
+}
+
+function renderAreasList(){
+if(!isAdmin)return;
+const box=document.getElementById("areasList");
+if(!box)return;
+if(customAreas.length===0){
+box.innerHTML=`<div class="admin-sub">Nessuna area personalizzata creata.</div>`;
+return;
+}
+box.innerHTML="";
+customAreas.forEach(area=>{
+const safeName=escapeHtml(area.name||"Area");
+const active=area.active===true;
+const row=document.createElement("div");
+row.className="admin-user";
+row.innerHTML=`
+<div class="admin-user-main">
+<div class="admin-user-name">${safeName} ${active?"🟢":"🔴"}</div>
+<div class="admin-user-id">${area.id} · ${area.type||"radius"} · raggio ${area.radius||0}m</div>
+</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+<button class="admin-mini-btn ${active?"":"unban"}" onclick="toggleAreaActive('${area.id}',${!active})">${active?"Disattiva":"Attiva"}</button>
+<button class="admin-mini-btn" onclick="deleteArea('${area.id}')">Elimina</button>
+</div>
+`;
+box.appendChild(row);
+});
+}
+
 function startListeners(){
 if(unsubscribeMessages) unsubscribeMessages();
 if(unsubscribePresence) unsubscribePresence();
@@ -904,47 +1088,23 @@ renderBannedUsers();
 });
 }
 
-const messagesQuery=query(
-collection(db,"messages"),
-where("areaId","==",currentAreaId)
-);
+unsubscribeAreas=onSnapshot(collection(db,"areas"),(snap)=>{
+customAreas=[];
+snap.forEach(d=>{
+const data=d.data();
+customAreas.push({id:d.id,...data});
+});
+renderAreasList();
+updateCurrentAreaFromPosition();
+renderAccessState();
+updateMap();
+});
+
+const messagesQuery=query(collection(db,"messages"),orderBy("time"));
 
 unsubscribeMessages=onSnapshot(messagesQuery,(snapshot)=>{
-const container=document.getElementById("messages");
-container.innerHTML="";
-
-const docs=snapshot.docs.slice().sort((a,b)=>{
-const ta=a.data().time||0;
-const tb=b.data().time||0;
-return ta-tb;
-});
-
-docs.forEach(docSnap=>{
-const data=docSnap.data();
-const messageId=docSnap.id;
-const safeName=escapeHtml(data.name||"Utente");
-const safeText=escapeHtml(data.text||"");
-const avatar=data.avatar||"";
-const isMe=data.userId===userId;
-
-const div=document.createElement("div");
-div.className=isMe?"message-row me":"message-row other";
-
-div.innerHTML=`
-<div class="msg-avatar">
-${avatar?`<img src="${avatar}">`:safeName[0].toUpperCase()}
-</div>
-<div class="message-bubble">
-<div class="name">${isMe?"TU":safeName}</div>
-<div class="text">${safeText}</div>
-${isAdmin?`<button class="delete-msg-btn" onclick="deleteMessage('${messageId}')">Elimina</button>`:""}
-</div>
-`;
-
-container.appendChild(div);
-});
-
-container.scrollTop=container.scrollHeight;
+latestMessageDocs=snapshot.docs.slice();
+renderMessages();
 
 if(firstSnapshot){
 firstSnapshot=false;
@@ -952,7 +1112,8 @@ firstSnapshot=false;
 let hasNewOther=false;
 snapshot.docChanges().forEach(change=>{
 const data=change.doc.data();
-if(change.type==="added" && data.userId!==userId){
+const msgAreaId=data.areaId||"main";
+if(change.type==="added" && data.userId!==userId && msgAreaId===currentAreaId){
 hasNewOther=true;
 }
 });
@@ -1007,11 +1168,34 @@ refreshAreaAdminUI();
 if(!map || typeof L==='undefined') return;
 const center=[areaCenterLat,areaCenterLng];
 if(!areaCircle){
-areaCircle=L.circle(center,{radius:areaRadius,color:'#FF8C42',fillColor:'#FF8C42',fillOpacity:0.18,weight:2}).addTo(map);
+areaCircle=L.circle(center,{radius:Math.max(areaRadius,1),color:'#FF8C42',fillColor:'#FF8C42',fillOpacity:areaRadius>0?0.18:0.04,weight:2}).addTo(map).bindPopup('Area principale');
 }else{
 areaCircle.setLatLng(center);
-areaCircle.setRadius(areaRadius);
+areaCircle.setRadius(Math.max(areaRadius,1));
+areaCircle.setStyle({fillOpacity:areaRadius>0?0.18:0.04});
+areaCircle.bindPopup('Area principale'+(areaRadius>0?'':' · chiusa'));
 }
+
+Object.keys(customAreaCircles).forEach(id=>{
+if(!customAreas.find(a=>a.id===id)){
+map.removeLayer(customAreaCircles[id]);
+delete customAreaCircles[id];
+}
+});
+customAreas.forEach(area=>{
+if(area.type!=="radius" || typeof area.centerLat!=="number" || typeof area.centerLng!=="number" || typeof area.radius!=="number")return;
+const areaCenter=[area.centerLat,area.centerLng];
+const style={radius:area.radius,color:area.active?'#22c55e':'#777',fillColor:area.active?'#22c55e':'#777',fillOpacity:area.active?0.14:0.05,weight:2};
+if(!customAreaCircles[area.id]){
+customAreaCircles[area.id]=L.circle(areaCenter,style).addTo(map).bindPopup((area.name||'Area')+(area.active?' · attiva':' · disattivata'));
+}else{
+customAreaCircles[area.id].setLatLng(areaCenter);
+customAreaCircles[area.id].setRadius(area.radius);
+customAreaCircles[area.id].setStyle(style);
+customAreaCircles[area.id].bindPopup((area.name||'Area')+(area.active?' · attiva':' · disattivata'));
+}
+});
+
 if(latestUserLat!==null && latestUserLng!==null){
 const pos=[latestUserLat,latestUserLng];
 if(!userMarker){
@@ -1019,7 +1203,8 @@ userMarker=L.marker(pos).addTo(map).bindPopup('La tua posizione');
 }else{
 userMarker.setLatLng(pos);
 }
-const group=L.featureGroup([areaCircle,userMarker]);
+const layers=[areaCircle,userMarker,...Object.values(customAreaCircles)];
+const group=L.featureGroup(layers);
 map.fitBounds(group.getBounds().pad(0.25));
 }else{
 map.setView(center,14);
