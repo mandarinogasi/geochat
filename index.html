@@ -371,7 +371,7 @@ body.keyboard-open .bottom-nav{display:none!important;}
 <div class="admin-status" id="areaAdminStatus">Area: caricamento...</div>
 <div class="admin-grid" style="margin-top:10px">
 <button class="admin-btn" onclick="closeMainArea()">🛑 Chiudi raggio</button>
-<button class="admin-btn secondary" onclick="saveAdminRadius()">✅ Riattiva</button>
+<button class="admin-btn secondary" onclick="reactivateMainArea()">✅ Riattiva</button>
 </div>
 
 <div class="admin-section">
@@ -1818,9 +1818,11 @@ unbannedBy:userId
 
 window.saveAdminRadius=async function(){
 if(!isAdmin)return;
-const value=Number(document.getElementById("adminRadiusInput").value);
-if(value<0 || Number.isNaN(value)){
-alert("Inserisci un raggio valido in metri. Usa 0 per chiudere il raggio principale.");
+const input=document.getElementById("adminRadiusInput");
+const raw=(input.value||"").trim();
+const value=Number(raw);
+if(raw==="" || value<0 || Number.isNaN(value)){
+alert("Inserisci un raggio valido in metri. Usa 0 solo se vuoi chiudere il raggio principale.");
 return;
 }
 await setDoc(doc(db,"appConfig","main"),{
@@ -1828,6 +1830,23 @@ areaRadius:value,
 updatedAt:Date.now(),
 updatedBy:userId
 },{merge:true});
+showToast("Raggio salvato: " + value + " m");
+};
+
+window.reactivateMainArea=async function(){
+if(!isAdmin)return;
+const input=document.getElementById("adminRadiusInput");
+let value=Number((input.value||"").trim());
+if(!value || Number.isNaN(value) || value<=0){
+value=DEFAULT_RADIUS;
+if(input) input.value=value;
+}
+await setDoc(doc(db,"appConfig","main"),{
+areaRadius:value,
+updatedAt:Date.now(),
+updatedBy:userId
+},{merge:true});
+showToast("Area principale riattivata: " + value + " m");
 };
 
 window.saveCurrentCenter=async function(){
