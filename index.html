@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <title>GeoChat Pulse</title>
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest.json?v=20260428-1">
 <meta name="theme-color" content="#FF8C42">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -202,54 +202,6 @@ body.keyboard-open .input-row input{height:48px;}
 body.keyboard-open .send-btn{height:48px;min-width:54px;}
 .notify-permission-box{display:flex;flex-direction:column;gap:10px;margin-top:14px;text-align:left;background:rgba(255,140,66,.10);border:1px solid rgba(255,140,66,.28);border-radius:18px;padding:13px;color:var(--text);font-size:14px;line-height:1.35}
 .notify-permission-box b{color:var(--deep-orange);font-family:Orbitron;font-size:12px}
-
-
-/* === GeoChat v7 FIX DEFINITIVO TASTIERA iPhone/Android ===
-   Obiettivo: niente input flottante, niente hero che sparisce, niente resize forzato.
-   La tastiera resta comportamento nativo: si apre, si scrive, dopo invio resta aperta,
-   si chiude solo toccando fuori dal campo messaggio. */
-body.keyboard-open #page-chat .panel.hero{display:block!important;}
-body.keyboard-open #page-chat>.panel:last-child{margin-bottom:18px!important;}
-body.keyboard-open .app{padding-bottom:calc(104px + env(safe-area-inset-bottom))!important;}
-body.keyboard-open #messages{max-height:420px!important;min-height:0!important;scroll-padding-bottom:0!important;}
-body.keyboard-open .input-row,
-#chat .input-row{
-  position:static!important;
-  bottom:auto!important;
-  z-index:auto!important;
-  background:transparent!important;
-  border:none!important;
-  box-shadow:none!important;
-  padding:0!important;
-  border-radius:0!important;
-  margin:0!important;
-}
-body.keyboard-open .input-row input,
-#chat .input-row input{
-  height:auto!important;
-}
-body.keyboard-open .send-btn,
-#chat .send-btn{
-  height:auto!important;
-  min-width:54px;
-}
-body.keyboard-open .bottom-nav{display:none!important;}
-
-@media(max-width:520px){
-  #chat .input-row{
-    position:static!important;
-    bottom:auto!important;
-    background:transparent!important;
-    padding:0!important;
-    border-radius:0!important;
-    margin:0!important;
-    z-index:auto!important;
-  }
-  #messages{
-    max-height:420px!important;
-    min-height:0!important;
-  }
-}
 
 </style>
 </head>
@@ -582,7 +534,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, sendPasswordResetEmail
+  GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig={
@@ -598,7 +550,6 @@ const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
 const auth=getAuth(app);
 const provider=new GoogleAuthProvider();
-provider.setCustomParameters({ prompt: "select_account" });
 const OWNER_UID="YO46psP0c9VIotrxUdNmEUevkZn1";
 const ADMIN_UID=OWNER_UID;
 let currentRole="user";
@@ -693,21 +644,7 @@ const adminPanel=document.getElementById("adminPanel");
 if(adminPanel) adminPanel.style.display=isHelper?"block":"none";
 const ownerPanel=document.getElementById("ownerRolesPanel");
 if(ownerPanel) ownerPanel.style.display=isOwner?"block":"none";
-
-/* FIX AREA PERSONALIZZATA:
-   Alcuni blocchi admin hanno sia .admin-only che .helper-hidden (es. Gestione area).
-   Prima .helper-hidden cancellava il display:block e il pannello tornava display:none
-   per colpa di .admin-panel, quindi Owner/Admin non vedevano o non potevano usare
-   la creazione/modifica aree. Ora Helper li nasconde, Owner/Admin li vedono. */
-document.querySelectorAll(".helper-hidden").forEach(el=>{
-  if(isHelper && !isAdmin){
-    el.style.display="none";
-  }else if(el.classList.contains("admin-only")){
-    el.style.display=isHelper?"block":"none";
-  }else{
-    el.style.display="";
-  }
-});
+document.querySelectorAll(".helper-hidden").forEach(el=>el.style.display=(isHelper && !isAdmin)?"none":"");
 document.querySelectorAll(".helper-tool").forEach(el=>el.style.display=isHelper?"block":"none");
 const usersToolTitle=document.getElementById("usersToolTitle");
 if(usersToolTitle) usersToolTitle.innerText=(isAdmin?"👥 Utenti online / ban":"👥 Utenti online / timeout");
@@ -830,37 +767,12 @@ showAuthError("Email di recupero inviata. Controlla la posta.");
 }catch(e){showAuthError(e.message);}
 };
 
-function shouldUseGoogleRedirect(){
-const ua=navigator.userAgent||"";
-const isIOS=/iPad|iPhone|iPod/.test(ua) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
-const isMobile=/Android|iPhone|iPad|iPod/i.test(ua);
-const isStandalone=window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone===true;
-return isIOS || isMobile || isStandalone;
-}
-
 window.loginGoogle=async function(){
 try{
 clearAuthError();
-if(shouldUseGoogleRedirect()){
-await signInWithRedirect(auth,provider);
-return;
-}
 await signInWithPopup(auth,provider);
-}catch(e){
-console.log("google login error",e);
-try{
-await signInWithRedirect(auth,provider);
-}catch(err){
-console.log("google redirect error",err);
-showAuthError(err.message || e.message || "Errore login Google");
-}
-}
+}catch(e){showAuthError(e.message);}
 };
-
-getRedirectResult(auth).catch((e)=>{
-console.log("google redirect result error",e);
-showAuthError(e.message || "Errore completamento login Google");
-});
 
 window.logout=async function(){
 inside=false;
@@ -1034,73 +946,68 @@ function setupMobileKeyboardFix(){
 const input=document.getElementById('message');
 const messages=document.getElementById('messages');
 const sendBtn=document.querySelector('.send-btn');
+const root=document.documentElement;
 if(!input)return;
 
-function setKeyboardState(open){
-document.body.classList.toggle('keyboard-open', !!open);
-if(open && messages){
+function updateViewportVars(forceOpen){
+let viewportHeight=window.innerHeight;
+if(window.visualViewport){
+viewportHeight=window.visualViewport.height;
+}
+root.style.setProperty('--vvh', viewportHeight + 'px');
+const active=document.activeElement===input;
+document.body.classList.toggle('keyboard-open', typeof forceOpen==='boolean' ? forceOpen : active);
+if(active && messages){
 setTimeout(()=>{messages.scrollTop=messages.scrollHeight;},80);
 }
 }
 
-/* Non ridimensioniamo più la viewport e non spostiamo l'input:
-   su iPhone/Android lasciamo lavorare la tastiera nativa del browser. */
-if(!input.dataset.keyboardFixBoundV7){
-input.dataset.keyboardFixBoundV7='true';
-input.addEventListener('focus',()=>setKeyboardState(true));
-input.addEventListener('blur',()=>setTimeout(()=>setKeyboardState(false),120));
+if(!input.dataset.keyboardFixBound){
+input.dataset.keyboardFixBound='true';
+input.addEventListener('focus',()=>{
+updateViewportVars(true);
+setTimeout(()=>updateViewportVars(true),180);
+});
+input.addEventListener('blur',()=>setTimeout(()=>updateViewportVars(false),180));
 }
 
-/* Mantiene la tastiera aperta quando premi invio, ma NON blocca il tap.
-   Su iPhone il vecchio preventDefault su touchstart impediva l'onclick del bottone. */
-if(sendBtn && !sendBtn.dataset.keepKeyboardBoundV8){
-sendBtn.dataset.keepKeyboardBoundV8='true';
-
-// Desktop / mouse: evita perdita focus, il normale onclick invia il messaggio.
-sendBtn.addEventListener('mousedown',(e)=>{
-if(document.activeElement===input){
+if(sendBtn && !sendBtn.dataset.keepKeyboardBound){
+sendBtn.dataset.keepKeyboardBound='true';
+['mousedown','touchstart'].forEach(evt=>{
+sendBtn.addEventListener(evt,(e)=>{
 e.preventDefault();
-window.__geochatKeepFocusAfterSend=true;
-}
+input.focus();
 },{passive:false});
-
-// Mobile iPhone/Android: touchstart NON viene bloccato, altrimenti il bottone non invia.
-sendBtn.addEventListener('touchstart',()=>{
-window.__geochatTouchingSend=true;
-window.__geochatKeepFocusAfterSend=true;
-},{passive:true});
-
-// Mobile: invio manuale su touchend e blocco del click sintetico per evitare doppio invio.
-sendBtn.addEventListener('touchend',(e)=>{
-if(!window.__geochatTouchingSend)return;
-e.preventDefault();
-window.__geochatTouchingSend=false;
-try{ window.sendMessage(); }catch(err){ console.log('touch send error',err); }
-setTimeout(()=>{try{input.focus();}catch(err){}},40);
-},{passive:false});
-
-sendBtn.addEventListener('touchcancel',()=>{
-window.__geochatTouchingSend=false;
-},{passive:true});
+});
 }
 
-/* Chiudi la tastiera solo quando tocchi fuori dalla riga messaggio. */
-if(!window.__geochatTapOutsideBoundV7){
-window.__geochatTapOutsideBoundV7=true;
+if(!window.__geochatTapOutsideBound){
+window.__geochatTapOutsideBound=true;
 document.addEventListener('touchstart',(e)=>{
 if(document.activeElement!==input)return;
 const row=e.target.closest && e.target.closest('.input-row');
-const modal=e.target.closest && e.target.closest('.modal-card,.auth-card');
+const modal=e.target.closest && e.target.closest('.modal-card,.auth-card,.install-modal-card');
 if(!row && !modal) input.blur();
 },{passive:true});
 document.addEventListener('mousedown',(e)=>{
 if(document.activeElement!==input)return;
 const row=e.target.closest && e.target.closest('.input-row');
-const modal=e.target.closest && e.target.closest('.modal-card,.auth-card');
+const modal=e.target.closest && e.target.closest('.modal-card,.auth-card,.install-modal-card');
 if(!row && !modal) input.blur();
 });
 }
-setKeyboardState(document.activeElement===input);
+
+if(window.visualViewport && !window.__geochatKeyboardViewportBound){
+window.__geochatKeyboardViewportBound=true;
+window.visualViewport.addEventListener('resize',()=>updateViewportVars());
+window.visualViewport.addEventListener('scroll',()=>updateViewportVars());
+}
+if(!window.__geochatKeyboardResizeBound){
+window.__geochatKeyboardResizeBound=true;
+window.addEventListener('resize',()=>updateViewportVars());
+window.addEventListener('orientationchange',()=>setTimeout(()=>updateViewportVars(false),450));
+}
+updateViewportVars(false);
 }
 
 function notificationsAlreadyHandled(){
@@ -1750,7 +1657,6 @@ time:Date.now()
 });
 
 input.value="";
-setTimeout(()=>{try{input.focus();}catch(e){}},30);
 setTimeout(()=>{
 try{
 input.focus();
@@ -1866,7 +1772,6 @@ const radius=Number(document.getElementById("newAreaRadiusInput").value);
 const color=getNewAreaColor();
 if(name.length<2){alert("Scrivi un nome area");return;}
 if(!radius || radius<1){alert("Inserisci un raggio valido");return;}
-try{
 await addDoc(collection(db,"areas"),{
 name:name,
 type:"radius",
@@ -1881,10 +1786,6 @@ createdBy:userId
 document.getElementById("newAreaNameInput").value="";
 document.getElementById("newAreaRadiusInput").value="";
 alert("Area creata");
-}catch(e){
-console.log("create radius area error",e);
-alert("Errore creazione area. Controlla che le regole Firebase permettano agli admin di scrivere in /areas.");
-}
 };
 
 function getNewAreaColor(){
@@ -1982,7 +1883,6 @@ const name=(document.getElementById("newAreaNameInput").value||"").trim();
 const color=getNewAreaColor();
 if(name.length<2){alert("Scrivi un nome area");return;}
 if(polygonDraftPoints.length<3){alert("Servono almeno 3 punti per creare un perimetro");return;}
-try{
 await addDoc(collection(db,"areas"),{
 name:name,
 type:"polygon",
@@ -1997,10 +1897,6 @@ polygonDraftPoints=[];
 selectedPolygonPointIndex=null;
 updateDraftPolygon();
 alert("Perimetro creato");
-}catch(e){
-console.log("create polygon area error",e);
-alert("Errore creazione perimetro. Controlla che le regole Firebase permettano agli admin di scrivere in /areas.");
-}
 };
 
 function updateDraftPolygon(){
@@ -2821,10 +2717,24 @@ document.getElementById("themeBtn").innerText="🌙";
 </script>
 
 <script>
+// GeoChat SW update helper: forza il controllo aggiornamenti senza toccare chat, aree o Firebase.
+// Cambia GEOCHAT_APP_VERSION quando fai un update importante su GitHub.
+const GEOCHAT_APP_VERSION = "20260428-1";
+
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js")
-      .then(() => console.log("GeoChat service worker registrato"))
+    navigator.serviceWorker.register("sw.js?v=" + GEOCHAT_APP_VERSION)
+      .then((registration) => {
+        console.log("GeoChat service worker registrato", GEOCHAT_APP_VERSION);
+        registration.update().catch(() => {});
+
+        let refreshed = false;
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (refreshed) return;
+          refreshed = true;
+          window.location.reload();
+        });
+      })
       .catch(err => console.log("Errore service worker", err));
   });
 }
