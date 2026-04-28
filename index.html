@@ -822,7 +822,6 @@ if(unsubscribeBans) unsubscribeBans();
 if(unsubscribeTimeouts) unsubscribeTimeouts();
 if(unsubscribeAreas) unsubscribeAreas();
 if(unsubscribeRoles) unsubscribeRoles();
-if(unsubscribeRoles) unsubscribeRoles();
 if(unsubscribePinned) unsubscribePinned();
 if(unsubscribeOwnBan) unsubscribeOwnBan();
 if(unsubscribeBans) unsubscribeBans();
@@ -973,11 +972,14 @@ input.addEventListener('blur',()=>setTimeout(()=>updateViewportVars(false),180))
 
 if(sendBtn && !sendBtn.dataset.keepKeyboardBound){
 sendBtn.dataset.keepKeyboardBound='true';
+
 ['mousedown','touchstart'].forEach(evt=>{
 sendBtn.addEventListener(evt,(e)=>{
-e.preventDefault();
-input.focus();
-},{passive:false});
+// NON blocchiamo più il click
+setTimeout(()=>{
+  try{ input.focus(); }catch(err){}
+},50);
+},{passive:true});
 });
 }
 
