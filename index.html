@@ -93,6 +93,11 @@ body.light input{background:rgba(255,255,255,.8)}
 .auth-sub{color:var(--muted);font-size:14px;margin-bottom:18px}
 .auth-row{display:flex;gap:10px}
 .auth-row button{flex:1}
+
+.auth-password-wrap{position:relative;margin-top:14px}
+.auth-password-wrap input{width:100%;padding-right:52px}
+.auth-eye-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:40px;height:40px;border:none;border-radius:14px;background:rgba(255,255,255,.08);color:var(--text);font-size:17px;cursor:pointer}
+.auth-link-btn{border:none;background:transparent;color:var(--orange);font-weight:800;margin-top:12px;cursor:pointer}
 .logout-btn{font-size:11px;padding:7px 9px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted)}
 .admin-panel{display:none;border:1px solid rgba(255,140,66,.35);background:linear-gradient(135deg,rgba(255,140,66,.14),rgba(78,89,140,.12));}
 .admin-title{font-family:Orbitron;font-size:18px;font-weight:800;margin-bottom:8px;color:var(--deep-orange)}
@@ -167,9 +172,12 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
     <div class="auth-title">GeoChat</div>
     <div class="auth-sub">Accedi o crea un account per entrare nella zona.</div>
 
-    <input id="authEmail" type="email" placeholder="Email" />
-    <br><br>
-    <input id="authPassword" type="password" placeholder="Password" />
+    <input id="authEmail" type="text" placeholder="Email o nickname" autocomplete="username" />
+
+    <div class="auth-password-wrap">
+      <input id="authPassword" type="password" placeholder="Password" autocomplete="current-password" />
+      <button class="auth-eye-btn" type="button" onclick="toggleAuthPassword()" id="authEyeBtn">👁</button>
+    </div>
 
     <div class="auth-row">
       <button class="auth-btn" onclick="loginEmail()">Login</button>
@@ -177,6 +185,7 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
     </div>
 
     <button class="ghost-btn" onclick="loginGoogle()">Continua con Google</button>
+    <button class="auth-link-btn" onclick="resetPassword()">Password dimenticata?</button>
     <div class="auth-sub" id="authError" style="margin-top:14px;color:#FF8C42"></div>
   </div>
 </div>
@@ -405,7 +414,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
+  GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig={
@@ -421,7 +430,7 @@ const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
 const auth=getAuth(app);
 const provider=new GoogleAuthProvider();
-const ADMIN_UID="fLSuGzVjHReYWAK8lOlHxACYGo02";
+const ADMIN_UID="RMopEnepnfhRKNAWS4Nu1PWoakd2";
 let isAdmin=false;
 const notifyAudio=new Audio("notifica.mp3");
 notifyAudio.preload="auto";
@@ -494,10 +503,49 @@ let notificationCooldowns={};
 
 const nicknameInput=document.getElementById("nickname");
 
+function normalizeUsername(name){
+return (name||"").trim().toLowerCase().replace(/\s+/g,"_").replace(/[^a-z0-9_.-]/g,"").slice(0,30);
+}
+
+async function resolveLoginIdentifier(identifier){
+const value=(identifier||"").trim();
+if(value.includes("@")) return value;
+const username=normalizeUsername(value);
+if(!username) throw new Error("Inserisci email o nickname");
+const snap=await getDoc(doc(db,"usernames",username));
+if(!snap.exists()) throw new Error("Nickname non trovato. Accedi con email almeno una volta.");
+const data=snap.data();
+if(!data.email) throw new Error("Email non collegata a questo nickname");
+return data.email;
+}
+
+async function syncUsernameMapping(name,email){
+try{
+const username=normalizeUsername(name);
+if(!username || !email || !userId)return;
+await setDoc(doc(db,"usernames",username),{
+uid:userId,
+email:email,
+name:name,
+updatedAt:Date.now()
+},{merge:true});
+}catch(e){console.log("username sync error",e);}
+}
+
+window.toggleAuthPassword=function(){
+const input=document.getElementById("authPassword");
+const btn=document.getElementById("authEyeBtn");
+if(!input)return;
+const visible=input.type==="text";
+input.type=visible?"password":"text";
+if(btn) btn.innerText=visible?"👁":"🙈";
+};
+
 window.loginEmail=async function(){
 try{
 clearAuthError();
-const email=document.getElementById("authEmail").value.trim();
+const identifier=document.getElementById("authEmail").value.trim();
+const email=await resolveLoginIdentifier(identifier);
 const pass=document.getElementById("authPassword").value;
 await signInWithEmailAndPassword(auth,email,pass);
 }catch(e){showAuthError(e.message);}
@@ -508,7 +556,18 @@ try{
 clearAuthError();
 const email=document.getElementById("authEmail").value.trim();
 const pass=document.getElementById("authPassword").value;
+if(!email.includes("@")){showAuthError("Per registrarti usa un'email. Dopo potrai accedere col nickname.");return;}
 await createUserWithEmailAndPassword(auth,email,pass);
+}catch(e){showAuthError(e.message);}
+};
+
+window.resetPassword=async function(){
+try{
+clearAuthError();
+const identifier=document.getElementById("authEmail").value.trim();
+const email=await resolveLoginIdentifier(identifier);
+await sendPasswordResetEmail(auth,email);
+showAuthError("Email di recupero inviata. Controlla la posta.");
 }catch(e){showAuthError(e.message);}
 };
 
@@ -582,6 +641,9 @@ avatar: currentUser.photoURL || ""
 
 nicknameInput.value=profile.name||"";
 refreshProfileUI();
+if(profile.name && currentUser && currentUser.email){
+await syncUsernameMapping(profile.name,currentUser.email);
+}
 
 if(!profile.name){
 setTimeout(()=>openProfile(),500);
@@ -694,8 +756,8 @@ if(typeof Notification==="undefined")return;
 if(Notification.permission!=="granted")return;
 const notification=new Notification(title,{
 body:body,
-icon:"./icon.png",
-badge:"./icon.png",
+icon:"./icon-192.png",
+badge:"./icon-192.png",
 tag:"geochat-"+title+"-"+body,
 renotify:false
 });
@@ -777,6 +839,9 @@ await setDoc(doc(db,"profiles",userId),{
 name:profile.name,
 avatar:profile.avatar||""
 });
+if(currentUser && currentUser.email){
+await syncUsernameMapping(profile.name,currentUser.email);
+}
 
 refreshProfileUI();
 document.getElementById("profileModal").style.display="none";
