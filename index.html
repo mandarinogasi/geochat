@@ -708,14 +708,18 @@ activeBans={};
 activeTimeouts={};
 allTimeouts=[];
 allBannedUsers=[];
-if(unsubscribeMessages){unsubscribeMessages();unsubscribeMessages=null;}
-if(unsubscribePresence){unsubscribePresence();unsubscribePresence=null;}
-if(unsubscribePinned){unsubscribePinned();unsubscribePinned=null;}
-if(unsubscribeOwnBan){unsubscribeOwnBan();unsubscribeOwnBan=null;}
-if(unsubscribeBans){unsubscribeBans();unsubscribeBans=null;}
-if(unsubscribeTimeouts){unsubscribeTimeouts();unsubscribeTimeouts=null;}
-if(unsubscribeAreas){unsubscribeAreas();unsubscribeAreas=null;}
-if(unsubscribeRoles){unsubscribeRoles();unsubscribeRoles=null;}
+if(unsubscribeMessages) unsubscribeMessages();
+if(unsubscribePresence) unsubscribePresence();
+if(unsubscribePinned) unsubscribePinned();
+if(unsubscribeOwnBan) unsubscribeOwnBan();
+if(unsubscribeBans) unsubscribeBans();
+if(unsubscribeTimeouts) unsubscribeTimeouts();
+if(unsubscribeAreas) unsubscribeAreas();
+if(unsubscribeRoles) unsubscribeRoles();
+if(unsubscribeRoles) unsubscribeRoles();
+if(unsubscribePinned) unsubscribePinned();
+if(unsubscribeOwnBan) unsubscribeOwnBan();
+if(unsubscribeBans) unsubscribeBans();
 document.querySelectorAll(".admin-only").forEach(el=>el.style.display="none");
 document.getElementById("adminPanel").style.display="none";
 document.getElementById("authScreen").style.display="flex";
@@ -1313,7 +1317,6 @@ box.appendChild(row);
 }
 
 window.sendMessage=async function(){
-if(window.__geochatSendingMessage)return;
 if(!inside || isBanned)return;
 const activeTimeout=getActiveTimeout(userId);
 if(activeTimeout){
@@ -1333,11 +1336,9 @@ return;
 }
 
 const input=document.getElementById("message");
-if(!input)return;
 const msg=input.value.trim();
 if(msg==="")return;
 
-window.__geochatSendingMessage=true;
 try{
 await addDoc(collection(db,"messages"),{
 text:msg,
@@ -1350,16 +1351,9 @@ time:Date.now()
 });
 
 input.value="";
-setTimeout(()=>{
-if(window.__geochatKeepFocusAfterSend || document.body.classList.contains("keyboard-open")){
-try{input.focus();}catch(e){}
-}
-},40);
 }catch(e){
 console.log("send message error",e);
 alert("Errore invio messaggio. Controlla le regole Firebase aggiornate per areaId.");
-}finally{
-setTimeout(()=>{window.__geochatSendingMessage=false;},250);
 }
 };
 
@@ -2030,7 +2024,6 @@ box.appendChild(row);
 function renderMessages(){
 const container=document.getElementById("messages");
 if(!container)return;
-const wasNearBottom=(container.scrollHeight-container.scrollTop-container.clientHeight)<80;
 container.innerHTML="";
 const docs=latestMessageDocs.filter(docSnap=>{
 const data=docSnap.data();
@@ -2046,7 +2039,7 @@ const data=docSnap.data();
 const messageId=docSnap.id;
 const safeName=escapeHtml(data.name||"Utente");
 const safeText=escapeHtml(data.text||"");
-const safeAvatar=escapeHtml(data.avatar||"");
+const avatar=data.avatar||"";
 const isMe=data.userId===userId;
 
 const div=document.createElement("div");
@@ -2054,7 +2047,7 @@ div.className=isMe?"message-row me":"message-row other";
 
 div.innerHTML=`
 <div class="msg-avatar">
-${safeAvatar?`<img src="${safeAvatar}">`:safeName[0].toUpperCase()}
+${avatar?`<img src="${avatar}">`:safeName[0].toUpperCase()}
 </div>
 <div class="message-bubble">
 <div class="name">${isMe?"TU":safeName}</div>
@@ -2064,9 +2057,7 @@ ${isHelper?`<button class="delete-msg-btn" onclick="deleteMessage('${messageId}'
 `;
 container.appendChild(div);
 });
-if(wasNearBottom || firstSnapshot){
 container.scrollTop=container.scrollHeight;
-}
 }
 
 function renderAreasList(){
@@ -2109,14 +2100,12 @@ box.appendChild(row);
 refreshAdminAreaSelectUI();
 }
 function startListeners(){
-if(unsubscribeMessages){unsubscribeMessages();unsubscribeMessages=null;}
-if(unsubscribePresence){unsubscribePresence();unsubscribePresence=null;}
-if(unsubscribePinned){unsubscribePinned();unsubscribePinned=null;}
-if(unsubscribeOwnBan){unsubscribeOwnBan();unsubscribeOwnBan=null;}
-if(unsubscribeBans){unsubscribeBans();unsubscribeBans=null;}
-if(unsubscribeTimeouts){unsubscribeTimeouts();unsubscribeTimeouts=null;}
-if(unsubscribeAreas){unsubscribeAreas();unsubscribeAreas=null;}
-if(unsubscribeRoles){unsubscribeRoles();unsubscribeRoles=null;}
+if(unsubscribeMessages) unsubscribeMessages();
+if(unsubscribePresence) unsubscribePresence();
+if(unsubscribePinned) unsubscribePinned();
+if(unsubscribeOwnBan) unsubscribeOwnBan();
+if(unsubscribeBans) unsubscribeBans();
+if(unsubscribeTimeouts) unsubscribeTimeouts();
 
 unsubscribeRoles=onSnapshot(collection(db,"roles"),(snap)=>{
 roleMap={};
