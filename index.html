@@ -670,6 +670,7 @@ const input=document.getElementById("message");
 const msg=input.value.trim();
 if(msg==="")return;
 
+try{
 await addDoc(collection(db,"messages"),{
 text:msg,
 name:profile.name,
@@ -680,6 +681,10 @@ time:Date.now()
 });
 
 input.value="";
+}catch(e){
+console.log("send message error",e);
+alert("Errore invio messaggio. Controlla le regole Firebase aggiornate per areaId.");
+}
 };
 
 window.deleteMessage=async function(messageId){
@@ -901,15 +906,20 @@ renderBannedUsers();
 
 const messagesQuery=query(
 collection(db,"messages"),
-where("areaId","==",currentAreaId),
-orderBy("time")
+where("areaId","==",currentAreaId)
 );
 
 unsubscribeMessages=onSnapshot(messagesQuery,(snapshot)=>{
 const container=document.getElementById("messages");
 container.innerHTML="";
 
-snapshot.forEach(docSnap=>{
+const docs=snapshot.docs.slice().sort((a,b)=>{
+const ta=a.data().time||0;
+const tb=b.data().time||0;
+return ta-tb;
+});
+
+docs.forEach(docSnap=>{
 const data=docSnap.data();
 const messageId=docSnap.id;
 const safeName=escapeHtml(data.name||"Utente");
