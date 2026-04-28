@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <title>GeoChat Pulse</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#FF8C42">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GeoChat">
+<link rel="apple-touch-icon" href="icon-192.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -2080,6 +2086,16 @@ document.getElementById("themeBtn").innerText=light?"🌙":"☀️";
 if(localStorage.getItem("theme")==="light"){
 document.body.classList.add("light");
 document.getElementById("themeBtn").innerText="🌙";
+}
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js")
+      .then(() => console.log("GeoChat service worker registrato"))
+      .catch(err => console.log("Errore service worker", err));
+  });
 }
 </script>
 </body>
