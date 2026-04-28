@@ -1,4 +1,4 @@
-const CACHE_VERSION = "geochat-v20260428-1";
+const CACHE_VERSION = "geochat-v20260428-3";
 
 self.addEventListener("install", (event) => {
   console.log("SW installato:", CACHE_VERSION);
@@ -28,5 +28,5 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // No cache aggressiva: lascia passare sempre la rete.
+  // Niente cache aggressiva: prende sempre la versione aggiornata dal sito.
 });
