@@ -1,15 +1,25 @@
 {
-  "id": "./index.html",
   "name": "GeoChat",
   "short_name": "GeoChat",
-  "start_url": "./index.html",
-  "scope": "./",
+  "description": "GeoChat - chat geolocalizzata per aree",
+  "start_url": "/index.html",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#070914",
   "theme_color": "#FF8C42",
-  "description": "Chat geolocalizzata basata sulle aree.",
   "icons": [
-    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
-    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }
