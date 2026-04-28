@@ -205,6 +205,7 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 <div class="settings-row">
 <button class="toggle-btn" id="soundBtn" onclick="toggleSound()">🔔 Suono</button>
 <button class="toggle-btn" id="vibrationBtn" onclick="toggleVibration()">📳 Vibrazione</button>
+<button class="toggle-btn" id="notificationBtn" onclick="requestNotificationPermission()">📲 Notifiche</button>
 </div>
 
 <div id="pinnedBanner" class="pinned-banner"></div>
@@ -478,6 +479,12 @@ let areaCircle=null;
 
 let soundEnabled=localStorage.getItem("geochat_sound")==="true";
 let vibrationEnabled=localStorage.getItem("geochat_vibration")==="true";
+let systemNotificationsEnabled=localStorage.getItem("geochat_notifications")==="true";
+let lastInsideForNotify=false;
+let lastAreaIdForNotify=null;
+let areaNotifyReady=false;
+let lastPinnedTextByArea={};
+let notificationCooldowns={};
 
 const nicknameInput=document.getElementById("nickname");
 
@@ -580,6 +587,12 @@ document.getElementById("soundBtn").classList.toggle("active",soundEnabled);
 document.getElementById("vibrationBtn").classList.toggle("active",vibrationEnabled);
 document.getElementById("soundBtn").innerText=soundEnabled?"🔔 Suono ON":"🔕 Suono OFF";
 document.getElementById("vibrationBtn").innerText=vibrationEnabled?"📳 Vibrazione ON":"📴 Vibrazione OFF";
+const notificationBtn=document.getElementById("notificationBtn");
+if(notificationBtn){
+const allowed=(typeof Notification!=="undefined" && Notification.permission==="granted" && systemNotificationsEnabled);
+notificationBtn.classList.toggle("active",allowed);
+notificationBtn.innerText=allowed?"📲 Notifiche ON":"📲 Notifiche";
+}
 }
 
 window.toggleSound=function(){
@@ -610,6 +623,106 @@ try{
 if(navigator.vibrate) navigator.vibrate([120,60,120]);
 }catch(e){}
 }
+}
+
+function showToast(message){
+const oldToast=document.getElementById("geoToast");
+if(oldToast) oldToast.remove();
+const toast=document.createElement("div");
+toast.id="geoToast";
+toast.innerText=message;
+toast.style.position="fixed";
+toast.style.left="50%";
+toast.style.bottom="104px";
+toast.style.transform="translateX(-50%)";
+toast.style.zIndex="9999";
+toast.style.maxWidth="calc(100% - 34px)";
+toast.style.padding="12px 16px";
+toast.style.borderRadius="18px";
+toast.style.background="rgba(14,18,38,.94)";
+toast.style.color="#fff";
+toast.style.border="1px solid rgba(255,140,66,.35)";
+toast.style.boxShadow="0 18px 50px rgba(0,0,0,.45)";
+toast.style.fontWeight="800";
+toast.style.textAlign="center";
+toast.style.backdropFilter="blur(14px)";
+document.body.appendChild(toast);
+setTimeout(()=>{toast.style.opacity="0";toast.style.transition="opacity .25s ease";},2300);
+setTimeout(()=>toast.remove(),2700);
+}
+
+function canTriggerNotification(key,delay=2500){
+if(!key)return true;
+const now=Date.now();
+if(notificationCooldowns[key] && now-notificationCooldowns[key]<delay)return false;
+notificationCooldowns[key]=now;
+return true;
+}
+
+window.requestNotificationPermission=async function(){
+if(typeof Notification==="undefined"){
+showToast("Notifiche non supportate da questo browser");
+return;
+}
+try{
+const result=await Notification.requestPermission();
+systemNotificationsEnabled=(result==="granted");
+localStorage.setItem("geochat_notifications",systemNotificationsEnabled?"true":"false");
+refreshSettingsUI();
+if(systemNotificationsEnabled){
+showToast("Notifiche attivate");
+showSystemNotification("GeoChat", "Notifiche attivate");
+}else{
+showToast("Permesso notifiche non concesso");
+}
+}catch(e){
+console.log("notification permission error",e);
+showToast("Errore attivazione notifiche");
+}
+};
+
+function showSystemNotification(title,body){
+try{
+if(!systemNotificationsEnabled)return;
+if(typeof Notification==="undefined")return;
+if(Notification.permission!=="granted")return;
+const notification=new Notification(title,{
+body:body,
+icon:"./icon.png",
+badge:"./icon.png",
+tag:"geochat-"+title+"-"+body,
+renotify:false
+});
+setTimeout(()=>notification.close(),5000);
+}catch(e){console.log("system notification error",e);}
+}
+
+function triggerGeoNotification(title,body,key){
+if(!canTriggerNotification(key))return;
+notifyNewMessage();
+showToast(body);
+showSystemNotification(title,body);
+}
+
+function handleAreaEntryNotification(){
+if(!currentUser)return;
+const adminManual=isAdmin && adminManualAreaId;
+if(isBanned){
+lastInsideForNotify=false;
+lastAreaIdForNotify=null;
+return;
+}
+if(inside && !adminManual){
+if(areaNotifyReady && (!lastInsideForNotify || lastAreaIdForNotify!==currentAreaId)){
+triggerGeoNotification("GeoChat", "Sei entrato in " + currentAreaName, "area-entry-"+currentAreaId);
+}
+lastInsideForNotify=true;
+lastAreaIdForNotify=currentAreaId;
+}else{
+lastInsideForNotify=false;
+lastAreaIdForNotify=null;
+}
+areaNotifyReady=true;
 }
 
 function refreshProfileUI(){
@@ -747,6 +860,7 @@ renderMessages();
 renderPinnedBanner();
 renderAdminUsers();
 }
+handleAreaEntryNotification();
 refreshAdminAreaSelectUI();
 return;
 }else{
@@ -776,6 +890,7 @@ renderMessages();
 renderPinnedBanner();
 renderAdminUsers();
 }
+handleAreaEntryNotification();
 refreshAdminAreaSelectUI();
 }
 
@@ -1520,6 +1635,11 @@ const pinnedByArea=latestAppConfig.pinnedByArea || {};
 let text=(pinnedByArea[currentAreaId] || "").trim();
 // Compatibilità con i vecchi avvisi globali: li mostra solo nella main.
 if(!text && currentAreaId==="main") text=(latestAppConfig.pinnedText || "").trim();
+const previousPinned=lastPinnedTextByArea[currentAreaId];
+if(previousPinned!==undefined && text && previousPinned!==text && latestAppConfig.updatedBy!==userId){
+triggerGeoNotification("GeoChat", "Nuovo avviso admin in " + currentAreaName, "pinned-"+currentAreaId);
+}
+lastPinnedTextByArea[currentAreaId]=text;
 const banner=document.getElementById("pinnedBanner");
 if(text){
 banner.innerHTML=`<b>ADMIN</b> ${escapeHtml(text)}`;
@@ -1776,7 +1896,7 @@ if(change.type==="added" && data.userId!==userId && msgAreaId===currentAreaId){
 hasNewOther=true;
 }
 });
-if(hasNewOther) notifyNewMessage();
+if(hasNewOther) triggerGeoNotification("GeoChat", "Nuovo messaggio in " + currentAreaName, "msg-"+currentAreaId);
 }
 });
 
