@@ -352,6 +352,14 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 <div class="admin-sub">Ogni area attiva ha la sua chat. Puoi attivare, disattivare o eliminare le aree.</div>
 <div class="admin-user-list" id="areasList"></div>
 </div>
+
+<div class="admin-section">
+<div class="admin-label">✏️ Modifica area esistente</div>
+<div class="admin-sub">Seleziona un’area già creata, modifica nome/colore/raggio o i punti del perimetro e salva.</div>
+<div id="editAreaBox" class="draw-mode-box">
+<div class="admin-sub">Nessuna area selezionata. Premi “Modifica” dalla lista aree.</div>
+</div>
+</div>
 </div>
 </section>
 
@@ -431,6 +439,14 @@ let polygonDraftPoints=[];
 let polygonDraftMarkers=[];
 let polygonDraftLayer=null;
 let selectedPolygonPointIndex=null;
+let editingAreaId=null;
+let editAreaDraftPoints=[];
+let editAreaDraftMarkers=[];
+let editAreaDraftLayer=null;
+let selectedEditPointIndex=null;
+let editRadiusCenterLat=null;
+let editRadiusCenterLng=null;
+let editPointMode=true;
 let latestUserLat=null;
 let latestUserLng=null;
 
@@ -1261,6 +1277,218 @@ polygonDraftLayer=L.polyline(latlngs,{color:draftColor,weight:2,dashArray:'6,6'}
 }
 
 
+function getEditingArea(){
+if(!editingAreaId)return null;
+return customAreas.find(a=>a.id===editingAreaId)||null;
+}
+
+window.startEditArea=function(areaId){
+if(!isAdmin)return;
+const area=customAreas.find(a=>a.id===areaId);
+if(!area){alert("Area non trovata");return;}
+editingAreaId=area.id;
+selectedEditPointIndex=null;
+editAreaDraftPoints=Array.isArray(area.points)?area.points.map(p=>({lat:p.lat,lng:p.lng})):[];
+editRadiusCenterLat=typeof area.centerLat==="number"?area.centerLat:null;
+editRadiusCenterLng=typeof area.centerLng==="number"?area.centerLng:null;
+showPage("map");
+setTimeout(()=>{initMap();renderEditAreaPanel();updateEditPolygon();focusEditAreaOnMap();},150);
+};
+
+window.cancelEditArea=function(){
+editingAreaId=null;
+editAreaDraftPoints=[];
+selectedEditPointIndex=null;
+editRadiusCenterLat=null;
+editRadiusCenterLng=null;
+clearEditAreaLayers();
+renderEditAreaPanel();
+};
+
+function renderEditAreaPanel(){
+const box=document.getElementById("editAreaBox");
+if(!box)return;
+const area=getEditingArea();
+if(!area){
+box.innerHTML=`<div class="admin-sub">Nessuna area selezionata. Premi “Modifica” dalla lista aree.</div>`;
+return;
+}
+const safeName=escapeHtml(area.name||"Area");
+const color=area.color||"#22c55e";
+if(area.type==="radius"){
+const radius=area.radius||1;
+box.innerHTML=`
+<div class="admin-label">Modifica raggio · ${safeName}</div>
+<input class="admin-number" id="editAreaNameInput" type="text" value="${safeName}" placeholder="Nome area" />
+<div class="color-row"><label for="editAreaColorInput">🎨 Colore area</label><input class="color-picker" id="editAreaColorInput" type="color" value="${color}" /></div>
+<input class="admin-number" id="editAreaRadiusInput" type="number" min="1" step="1" value="${radius}" placeholder="Raggio in metri" style="margin-top:10px" />
+<div class="admin-grid" style="margin-top:10px">
+<button class="admin-btn secondary" onclick="setEditRadiusCenterGps()">📍 Centro GPS</button>
+<button class="admin-btn secondary" onclick="setEditRadiusCenterMap()">🎯 Centro mappa</button>
+</div>
+<div class="admin-status" id="editAreaStatus">Centro: ${(editRadiusCenterLat||area.centerLat||0).toFixed(6)}, ${(editRadiusCenterLng||area.centerLng||0).toFixed(6)}</div>
+<div class="admin-grid" style="margin-top:10px">
+<button class="admin-btn secondary" onclick="saveEditedArea()">💾 Salva modifiche</button>
+<button class="admin-btn" onclick="cancelEditArea()">Annulla</button>
+</div>`;
+return;
+}
+box.innerHTML=`
+<div class="admin-label">Modifica perimetro · ${safeName}</div>
+<input class="admin-number" id="editAreaNameInput" type="text" value="${safeName}" placeholder="Nome area" />
+<div class="color-row"><label for="editAreaColorInput">🎨 Colore area</label><input class="color-picker" id="editAreaColorInput" type="color" value="${color}" onchange="updateEditPolygon()" /></div>
+<div class="draw-help">Tocca la mappa per aggiungere nuovi punti. Tocca un punto per selezionarlo, trascinalo per spostarlo o usa “Elimina selezionato”.</div>
+<div class="admin-grid">
+<button class="admin-btn secondary" onclick="addEditGpsPoint()">📍 Aggiungi punto GPS</button>
+<button class="admin-btn secondary" onclick="addEditMapCenterPoint()">🎯 Aggiungi centro mappa</button>
+</div>
+<div class="admin-grid" style="margin-top:10px">
+<button class="admin-btn" onclick="undoEditPolygonPoint()">↩️ Togli ultimo</button>
+<button class="admin-btn" onclick="deleteSelectedEditPoint()">🎯 Elimina selezionato</button>
+</div>
+<div class="admin-grid" style="margin-top:10px">
+<button class="admin-btn secondary" onclick="saveEditedArea()">💾 Salva modifiche</button>
+<button class="admin-btn" onclick="cancelEditArea()">Annulla</button>
+</div>
+<div class="point-list" id="editAreaPointsList">Nessun punto.</div>`;
+updateEditPointsList();
+}
+
+function focusEditAreaOnMap(){
+if(!map || typeof L==='undefined')return;
+const area=getEditingArea();
+if(!area)return;
+shouldAutoFitMap=false;
+if(area.type==="radius" && typeof area.centerLat==="number" && typeof area.centerLng==="number"){
+map.setView([area.centerLat,area.centerLng],16);
+return;
+}
+if(area.type==="polygon" && editAreaDraftPoints.length>=2){
+const group=L.featureGroup(editAreaDraftPoints.map(p=>L.marker([p.lat,p.lng])));
+map.fitBounds(group.getBounds().pad(0.25));
+}
+}
+
+window.setEditRadiusCenterGps=function(){
+if(latestUserLat===null || latestUserLng===null){alert("Posizione GPS non disponibile");return;}
+editRadiusCenterLat=latestUserLat;
+editRadiusCenterLng=latestUserLng;
+renderEditAreaPanel();
+};
+
+window.setEditRadiusCenterMap=function(){
+if(!map){alert("Apri prima la mappa");return;}
+const c=map.getCenter();
+editRadiusCenterLat=c.lat;
+editRadiusCenterLng=c.lng;
+renderEditAreaPanel();
+};
+
+function addEditPolygonPoint(lat,lng,source){
+if(!isAdmin || !editingAreaId)return;
+editAreaDraftPoints.push({lat:lat,lng:lng});
+selectedEditPointIndex=editAreaDraftPoints.length-1;
+shouldAutoFitMap=false;
+updateEditPolygon();
+}
+
+window.addEditGpsPoint=function(){
+if(latestUserLat===null || latestUserLng===null){alert("Posizione GPS non disponibile");return;}
+addEditPolygonPoint(latestUserLat,latestUserLng,"gps");
+};
+
+window.addEditMapCenterPoint=function(){
+if(!map){alert("Apri prima la mappa");return;}
+const c=map.getCenter();
+addEditPolygonPoint(c.lat,c.lng,"map-center");
+};
+
+window.undoEditPolygonPoint=function(){
+if(!isAdmin)return;
+editAreaDraftPoints.pop();
+selectedEditPointIndex=null;
+updateEditPolygon();
+};
+
+window.deleteSelectedEditPoint=function(){
+if(!isAdmin)return;
+if(selectedEditPointIndex===null || selectedEditPointIndex<0 || selectedEditPointIndex>=editAreaDraftPoints.length){alert("Seleziona prima un punto");return;}
+editAreaDraftPoints.splice(selectedEditPointIndex,1);
+selectedEditPointIndex=null;
+updateEditPolygon();
+};
+
+function selectEditPoint(index){
+selectedEditPointIndex=index;
+updateEditPolygon();
+}
+window.selectEditPoint=selectEditPoint;
+
+function updateEditPointsList(){
+const list=document.getElementById("editAreaPointsList");
+if(!list)return;
+if(editAreaDraftPoints.length===0){list.innerHTML="Nessun punto.";return;}
+list.innerHTML=editAreaDraftPoints.map((p,i)=>`<div class="${selectedEditPointIndex===i?"selected":""}" onclick="selectEditPoint(${i})">${i+1}. ${p.lat.toFixed(6)}, ${p.lng.toFixed(6)} ${selectedEditPointIndex===i?" · selezionato":""}</div>`).join("");
+}
+
+function clearEditAreaLayers(){
+if(!map)return;
+editAreaDraftMarkers.forEach(m=>map.removeLayer(m));
+editAreaDraftMarkers=[];
+if(editAreaDraftLayer){map.removeLayer(editAreaDraftLayer);editAreaDraftLayer=null;}
+}
+
+function updateEditPolygon(){
+updateEditPointsList();
+if(!map || typeof L==='undefined')return;
+clearEditAreaLayers();
+const area=getEditingArea();
+if(!area || area.type!=="polygon")return;
+const color=(document.getElementById("editAreaColorInput")&&document.getElementById("editAreaColorInput").value)||area.color||"#22c55e";
+editAreaDraftPoints.forEach((p,i)=>{
+const marker=L.marker([p.lat,p.lng],{
+draggable:true,
+icon:makeDraftPointIcon(color,selectedEditPointIndex===i),
+zIndexOffset:selectedEditPointIndex===i?1200:700
+}).addTo(map).bindPopup('Punto '+(i+1)+' · trascina per spostare');
+let longPressTimer=null;
+marker.on('click',function(e){if(e&&e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);selectEditPoint(i);});
+marker.on('dragstart',function(){shouldAutoFitMap=false;selectedEditPointIndex=i;if(longPressTimer)clearTimeout(longPressTimer);});
+marker.on('dragend',function(){const pos=marker.getLatLng();editAreaDraftPoints[i]={lat:pos.lat,lng:pos.lng};selectedEditPointIndex=i;updateEditPolygon();});
+marker.on('contextmenu',function(e){if(e&&e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);selectedEditPointIndex=i;if(confirm('Eliminare il punto '+(i+1)+'?')){editAreaDraftPoints.splice(i,1);selectedEditPointIndex=null;updateEditPolygon();}});
+marker.on('mousedown touchstart',function(){if(longPressTimer)clearTimeout(longPressTimer);longPressTimer=setTimeout(()=>{selectedEditPointIndex=i;if(confirm('Eliminare il punto '+(i+1)+'?')){editAreaDraftPoints.splice(i,1);selectedEditPointIndex=null;}updateEditPolygon();},1300);});
+marker.on('mouseup mouseout touchend dragstart',function(){if(longPressTimer)clearTimeout(longPressTimer);});
+editAreaDraftMarkers.push(marker);
+});
+if(editAreaDraftPoints.length>=2){
+const latlngs=editAreaDraftPoints.map(p=>[p.lat,p.lng]);
+editAreaDraftLayer=(editAreaDraftPoints.length>=3?L.polygon(latlngs,{color:color,fillColor:color,fillOpacity:0.20,weight:3,dashArray:'4,4'}):L.polyline(latlngs,{color:color,weight:3,dashArray:'4,4'})).addTo(map).bindPopup('Modifica area');
+}
+}
+
+window.saveEditedArea=async function(){
+if(!isAdmin || !editingAreaId)return;
+const area=getEditingArea();
+if(!area){alert("Area non trovata");return;}
+const name=(document.getElementById("editAreaNameInput")?.value||"").trim();
+const color=(document.getElementById("editAreaColorInput")?.value||area.color||"#22c55e");
+if(name.length<2){alert("Scrivi un nome area valido");return;}
+const payload={name:name,color:color,updatedAt:Date.now(),updatedBy:userId};
+if(area.type==="radius"){
+const radius=Number(document.getElementById("editAreaRadiusInput")?.value||0);
+if(!radius || radius<1){alert("Inserisci un raggio valido");return;}
+payload.radius=radius;
+payload.centerLat=editRadiusCenterLat!==null?editRadiusCenterLat:area.centerLat;
+payload.centerLng=editRadiusCenterLng!==null?editRadiusCenterLng:area.centerLng;
+}else if(area.type==="polygon"){
+if(editAreaDraftPoints.length<3){alert("Servono almeno 3 punti");return;}
+payload.points=editAreaDraftPoints.map(p=>({lat:p.lat,lng:p.lng}));
+}
+await setDoc(doc(db,"areas",editingAreaId),payload,{merge:true});
+alert("Area aggiornata");
+};
+
+
 window.toggleAreaActive=async function(areaId,active){
 if(!isAdmin)return;
 await setDoc(doc(db,"areas",areaId),{
@@ -1274,6 +1502,7 @@ window.deleteArea=async function(areaId){
 if(!isAdmin)return;
 if(!confirm("Eliminare questa area? I vecchi messaggi di quell'area resteranno nel database ma l'area non sarà più visibile."))return;
 await deleteDoc(doc(db,"areas",areaId));
+if(editingAreaId===areaId) cancelEditArea();
 };
 
 function refreshAreaAdminUI(){
@@ -1454,6 +1683,7 @@ row.innerHTML=`
 </div>
 <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
 <button class="admin-mini-btn unban" onclick="adminSelectArea('${area.id}')">Entra</button>
+<button class="admin-mini-btn unban" onclick="startEditArea('${area.id}')">Modifica</button>
 <button class="admin-mini-btn ${active?"":"unban"}" onclick="toggleAreaActive('${area.id}',${!active})">${active?"Disattiva":"Attiva"}</button>
 <button class="admin-mini-btn" onclick="deleteArea('${area.id}')">Elimina</button>
 </div>
@@ -1516,6 +1746,13 @@ const data=d.data();
 customAreas.push({id:d.id,...data});
 });
 renderAreasList();
+if(editingAreaId){
+const updatedEditingArea=getEditingArea();
+if(updatedEditingArea){
+if(updatedEditingArea.type==="polygon" && editAreaDraftPoints.length===0){editAreaDraftPoints=Array.isArray(updatedEditingArea.points)?updatedEditingArea.points.map(p=>({lat:p.lat,lng:p.lng})):[];}
+renderEditAreaPanel();
+}else{cancelEditArea();}
+}
 refreshAdminAreaSelectUI();
 updateCurrentAreaFromPosition();
 renderAccessState();
@@ -1587,6 +1824,10 @@ map.on('dragstart zoomstart movestart',function(){shouldAutoFitMap=false;lastMap
 map.on('click',function(e){
 if(Date.now()-lastMapInteractionAt<250)return;
 if(e.originalEvent && e.originalEvent.defaultPrevented)return;
+if(isAdmin && editingAreaId && getEditingArea() && getEditingArea().type==="polygon" && editPointMode){
+addEditPolygonPoint(e.latlng.lat,e.latlng.lng,"map");
+return;
+}
 if(isAdmin && createAreaMode==="polygon" && mapPointMode){
 addPolygonPoint(e.latlng.lat,e.latlng.lng,"map");
 }
@@ -1654,6 +1895,7 @@ customAreaCircles[area.id].bindPopup((area.name||'Area')+' · perimetro'+(active
 }
 });
 updateDraftPolygon();
+updateEditPolygon();
 
 if(latestUserLat!==null && latestUserLng!==null){
 const pos=[latestUserLat,latestUserLng];
@@ -1663,8 +1905,9 @@ userMarker=L.marker(pos).addTo(map).bindPopup('La tua posizione');
 userMarker.setLatLng(pos);
 }
 if(shouldAutoFitMap){
-const layers=[areaCircle,userMarker,...Object.values(customAreaCircles),...polygonDraftMarkers];
+const layers=[areaCircle,userMarker,...Object.values(customAreaCircles),...polygonDraftMarkers,...editAreaDraftMarkers];
 if(polygonDraftLayer) layers.push(polygonDraftLayer);
+if(editAreaDraftLayer) layers.push(editAreaDraftLayer);
 const group=L.featureGroup(layers);
 map.fitBounds(group.getBounds().pad(0.25));
 }
