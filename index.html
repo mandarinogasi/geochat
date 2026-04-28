@@ -127,6 +127,11 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 .profile-card{text-align:center}
 .profile-email{color:var(--muted);font-size:13px;margin-top:8px;word-break:break-all}
 .leaflet-container{font-family:Inter,Arial,sans-serif}
+.map-action-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.map-action-btn{border:1px solid var(--line);background:var(--bubble);color:var(--text);border-radius:16px;padding:12px;font-weight:800;cursor:pointer}
+.color-row{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--line);background:rgba(255,255,255,.07);border-radius:16px;padding:12px 14px;margin-top:10px}
+.color-row label{font-size:13px;font-weight:800;color:var(--muted)}
+.color-picker{width:54px;height:42px;border:none;background:transparent;padding:0;cursor:pointer}
 
 .draw-mode-box{border:1px solid var(--line);background:rgba(255,255,255,.05);border-radius:18px;padding:12px;margin-top:10px}
 .draw-mode-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
@@ -215,6 +220,10 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 <div class="page-title">🗺️ MAPPA ZONA</div>
 <div class="sub">Qui vedi l’area attiva, il raggio e la tua posizione.</div>
 <div id="map"></div>
+<div class="map-action-row">
+<button class="map-action-btn" onclick="centerMapOnUser()">📍 La mia posizione</button>
+<button class="map-action-btn" id="mapLayerBtn" onclick="toggleMapLayer()">🛰 Satellite</button>
+</div>
 <div class="map-info">
 <div class="info-box"><div class="info-label">Modalità</div><div class="info-value" id="areaModeText">Raggio</div></div>
 <div class="info-box"><div class="info-label">Raggio</div><div class="info-value" id="radiusText">-- m</div></div>
@@ -241,6 +250,10 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 <div class="admin-label">➕ Crea nuova area</div>
 <div class="admin-sub">Crea una chat separata con raggio oppure con perimetro personalizzato disegnato sulla mappa.</div>
 <input class="admin-number" id="newAreaNameInput" type="text" placeholder="Nome area es. Piazza Centro" />
+<div class="color-row">
+<label for="newAreaColorInput">🎨 Colore area</label>
+<input class="color-picker" id="newAreaColorInput" type="color" value="#22c55e" />
+</div>
 
 <div class="draw-mode-box">
 <div class="draw-mode-tabs">
@@ -412,6 +425,10 @@ let latestOnlineUsers=[];
 let activeBans={};
 let allBannedUsers=[];
 let map=null;
+let normalTileLayer=null;
+let satelliteTileLayer=null;
+let currentMapLayer="normal";
+let shouldAutoFitMap=true;
 let userMarker=null;
 let areaCircle=null;
 
@@ -908,12 +925,14 @@ return;
 }
 const name=(document.getElementById("newAreaNameInput").value||"").trim();
 const radius=Number(document.getElementById("newAreaRadiusInput").value);
+const color=getNewAreaColor();
 if(name.length<2){alert("Scrivi un nome area");return;}
 if(!radius || radius<1){alert("Inserisci un raggio valido");return;}
 await addDoc(collection(db,"areas"),{
 name:name,
 type:"radius",
 active:true,
+color:color,
 centerLat:latestUserLat,
 centerLng:latestUserLng,
 radius:radius,
@@ -924,6 +943,11 @@ document.getElementById("newAreaNameInput").value="";
 document.getElementById("newAreaRadiusInput").value="";
 alert("Area creata");
 };
+
+function getNewAreaColor(){
+const input=document.getElementById("newAreaColorInput");
+return input && input.value ? input.value : "#22c55e";
+}
 
 window.setAreaCreateMode=function(mode){
 createAreaMode=mode;
@@ -969,12 +993,14 @@ updateDraftPolygon();
 window.createPolygonArea=async function(){
 if(!isAdmin)return;
 const name=(document.getElementById("newAreaNameInput").value||"").trim();
+const color=getNewAreaColor();
 if(name.length<2){alert("Scrivi un nome area");return;}
 if(polygonDraftPoints.length<3){alert("Servono almeno 3 punti per creare un perimetro");return;}
 await addDoc(collection(db,"areas"),{
 name:name,
 type:"polygon",
 active:true,
+color:color,
 points:polygonDraftPoints,
 createdAt:Date.now(),
 createdBy:userId
@@ -999,15 +1025,18 @@ polygonDraftMarkers.forEach(m=>map.removeLayer(m));
 polygonDraftMarkers=[];
 if(polygonDraftLayer){map.removeLayer(polygonDraftLayer);polygonDraftLayer=null;}
 polygonDraftPoints.forEach((p,i)=>{
-const marker=L.circleMarker([p.lat,p.lng],{radius:6,color:'#FCAF58',fillColor:'#FF8C42',fillOpacity:0.9,weight:2}).addTo(map).bindPopup('Punto '+(i+1));
+const draftColor=getNewAreaColor();
+const marker=L.circleMarker([p.lat,p.lng],{radius:6,color:draftColor,fillColor:draftColor,fillOpacity:0.9,weight:2}).addTo(map).bindPopup('Punto '+(i+1));
 polygonDraftMarkers.push(marker);
 });
 if(polygonDraftPoints.length>=2){
 const latlngs=polygonDraftPoints.map(p=>[p.lat,p.lng]);
 if(polygonDraftPoints.length>=3){
-polygonDraftLayer=L.polygon(latlngs,{color:'#FCAF58',fillColor:'#FF8C42',fillOpacity:0.18,weight:2,dashArray:'6,6'}).addTo(map).bindPopup('Perimetro in creazione');
+const draftColor=getNewAreaColor();
+polygonDraftLayer=L.polygon(latlngs,{color:draftColor,fillColor:draftColor,fillOpacity:0.18,weight:2,dashArray:'6,6'}).addTo(map).bindPopup('Perimetro in creazione');
 }else{
-polygonDraftLayer=L.polyline(latlngs,{color:'#FCAF58',weight:2,dashArray:'6,6'}).addTo(map);
+const draftColor=getNewAreaColor();
+polygonDraftLayer=L.polyline(latlngs,{color:draftColor,weight:2,dashArray:'6,6'}).addTo(map);
 }
 }
 }
@@ -1308,7 +1337,9 @@ setTimeout(()=>{initMap();updateMap();},120);
 function initMap(){
 if(map || typeof L==='undefined') return;
 map=L.map('map',{zoomControl:true});
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+normalTileLayer=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+satelliteTileLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'});
+map.on('dragstart zoomstart',function(){shouldAutoFitMap=false;});
 map.on('click',function(e){
 if(isAdmin && createAreaMode==="polygon"){
 addPolygonPoint(e.latlng.lat,e.latlng.lng,"map");
@@ -1339,7 +1370,7 @@ delete customAreaCircles[id];
 });
 customAreas.forEach(area=>{
 const active=area.active===true;
-const color=active?'#22c55e':'#777';
+const color=active?(area.color||'#22c55e'):'#777';
 if(area.type==="radius"){
 if(typeof area.centerLat!=="number" || typeof area.centerLng!=="number" || typeof area.radius!=="number")return;
 const areaCenter=[area.centerLat,area.centerLng];
@@ -1385,14 +1416,39 @@ userMarker=L.marker(pos).addTo(map).bindPopup('La tua posizione');
 }else{
 userMarker.setLatLng(pos);
 }
+if(shouldAutoFitMap){
 const layers=[areaCircle,userMarker,...Object.values(customAreaCircles),...polygonDraftMarkers];
 if(polygonDraftLayer) layers.push(polygonDraftLayer);
 const group=L.featureGroup(layers);
 map.fitBounds(group.getBounds().pad(0.25));
-}else{
+}
+}else if(shouldAutoFitMap){
 map.setView(center,14);
 }
 }
+
+window.centerMapOnUser=function(){
+if(!map){initMap();}
+if(latestUserLat===null || latestUserLng===null){alert('Posizione non ancora disponibile');return;}
+shouldAutoFitMap=false;
+map.setView([latestUserLat,latestUserLng],17);
+};
+
+window.toggleMapLayer=function(){
+if(!map){initMap();}
+const btn=document.getElementById('mapLayerBtn');
+if(currentMapLayer==='normal'){
+if(normalTileLayer) map.removeLayer(normalTileLayer);
+if(satelliteTileLayer) satelliteTileLayer.addTo(map);
+currentMapLayer='satellite';
+if(btn) btn.innerText='🗺 Normale';
+}else{
+if(satelliteTileLayer) map.removeLayer(satelliteTileLayer);
+if(normalTileLayer) normalTileLayer.addTo(map);
+currentMapLayer='normal';
+if(btn) btn.innerText='🛰 Satellite';
+}
+};
 
 function escapeHtml(text){
 const div=document.createElement("div");
