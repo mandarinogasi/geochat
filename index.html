@@ -79,7 +79,7 @@ body.light input{background:rgba(255,255,255,.8)}
 .save-btn,.auth-btn{padding:14px;width:100%;margin-top:12px}
 .ghost-btn{border:1px solid var(--line);background:transparent;color:var(--text);border-radius:18px;padding:12px 14px;font-weight:800;width:100%;margin-top:10px}
 .footer{text-align:center;font-size:12px;color:var(--muted);margin-top:20px}
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:5000;padding:20px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:99;padding:20px}
 .modal-card{width:100%;max-width:430px;background:var(--card);border:1px solid var(--line);border-radius:30px;padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.55);text-align:center}
 .modal-title{font-family:Orbitron;font-size:22px;font-weight:800;margin-bottom:8px}
 .modal-sub{color:var(--muted);font-size:14px;margin-bottom:18px}
@@ -161,96 +161,6 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 @keyframes scan{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 @keyframes pulse{0%,100%{transform:scale(.96);opacity:.5}50%{transform:scale(1.05);opacity:1}}
 @keyframes pop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
-
-
-/* === GeoChat mobile/PWA install + iPhone/Android keyboard fix === */
-html,body{min-height:100%;height:100%;}
-body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
-.app{padding-bottom:calc(104px + env(safe-area-inset-bottom));}
-.bottom-nav{bottom:calc(14px + env(safe-area-inset-bottom));}
-.install-mini-btn{border:1px solid var(--line);background:var(--card);color:var(--text);height:44px;border-radius:999px;font-size:12px;font-weight:800;padding:0 12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
-.install-card{display:block;border:1px solid rgba(255,140,66,.35);background:linear-gradient(135deg,rgba(255,140,66,.16),rgba(78,89,140,.14));border-radius:24px;padding:14px;margin:-4px 0 18px;box-shadow:0 16px 45px rgba(0,0,0,.26)}
-.install-card.hide{display:none}
-.install-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.install-card-title{font-family:Orbitron;font-size:15px;font-weight:800;color:var(--deep-orange);margin-bottom:4px}
-.install-card-text{color:var(--muted);font-size:13px;line-height:1.35}
-.install-card-actions{display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:12px}
-.install-close{border:none;background:transparent;color:var(--muted);font-size:20px;font-weight:800;cursor:pointer;line-height:1}
-.install-primary{border:none;border-radius:16px;background:linear-gradient(135deg,var(--deep-orange),var(--orange));color:white;cursor:pointer;font-weight:800;padding:12px}
-.install-secondary{border:1px solid var(--line);background:var(--bubble);color:var(--text);border-radius:16px;padding:12px;font-weight:800;cursor:pointer}
-.install-steps{text-align:left;margin:14px 0 0;padding-left:20px;color:var(--text);line-height:1.55;font-size:14px}
-.install-steps li{margin:6px 0}
-.auth-install-btn{margin-top:10px;border:1px solid rgba(255,140,66,.35);background:rgba(255,140,66,.12);color:var(--deep-orange);border-radius:18px;padding:12px 14px;font-weight:800;width:100%;cursor:pointer}
-body.keyboard-open .bottom-nav{display:none}
-body.keyboard-open .app{padding-bottom:calc(18px + env(safe-area-inset-bottom))}
-body.keyboard-open #messages{max-height:calc(100dvh - 260px)}
-#message{font-size:16px}
-@supports (height:100dvh){.app{min-height:100dvh}#authScreen{min-height:100dvh}}
-@media(max-width:520px){.app{padding-left:14px;padding-right:14px}.panel{border-radius:24px;padding:16px}.top-actions{gap:6px}.theme-btn,.profile-btn{width:40px;height:40px}.logout-btn{display:none}.install-mini-btn{height:40px;padding:0 10px}.input-row{position:sticky;bottom:calc(8px + env(safe-area-inset-bottom));background:var(--card);padding:8px;border-radius:22px;margin:-2px -6px 0;z-index:10}#messages{max-height:calc(100dvh - 390px);min-height:180px}.auth-card{max-height:calc(100dvh - 28px);overflow:auto}}
-
-
-/* === GeoChat v6: tastiera stabile + prompt notifiche post-login === */
-:root{--vvh:100dvh;}
-body.keyboard-open{overflow-x:hidden;}
-body.keyboard-open .bottom-nav{display:none!important;}
-body.keyboard-open .app{padding-bottom:calc(18px + env(safe-area-inset-bottom));}
-body.keyboard-open #page-chat .panel.hero{display:none;}
-body.keyboard-open #page-chat>.panel:last-child{margin-bottom:0;}
-body.keyboard-open #messages{max-height:calc(var(--vvh) - 220px)!important;min-height:160px;scroll-padding-bottom:90px;}
-body.keyboard-open .input-row{position:sticky!important;bottom:calc(8px + env(safe-area-inset-bottom));z-index:20;background:var(--card);border:1px solid var(--line);box-shadow:0 12px 34px rgba(0,0,0,.28);padding:8px;border-radius:22px;margin:0 -6px;}
-body.keyboard-open .input-row input{height:48px;}
-body.keyboard-open .send-btn{height:48px;min-width:54px;}
-.notify-permission-box{display:flex;flex-direction:column;gap:10px;margin-top:14px;text-align:left;background:rgba(255,140,66,.10);border:1px solid rgba(255,140,66,.28);border-radius:18px;padding:13px;color:var(--text);font-size:14px;line-height:1.35}
-.notify-permission-box b{color:var(--deep-orange);font-family:Orbitron;font-size:12px}
-
-
-/* === GeoChat v7 FIX DEFINITIVO TASTIERA iPhone/Android ===
-   Obiettivo: niente input flottante, niente hero che sparisce, niente resize forzato.
-   La tastiera resta comportamento nativo: si apre, si scrive, dopo invio resta aperta,
-   si chiude solo toccando fuori dal campo messaggio. */
-body.keyboard-open #page-chat .panel.hero{display:block!important;}
-body.keyboard-open #page-chat>.panel:last-child{margin-bottom:18px!important;}
-body.keyboard-open .app{padding-bottom:calc(104px + env(safe-area-inset-bottom))!important;}
-body.keyboard-open #messages{max-height:420px!important;min-height:0!important;scroll-padding-bottom:0!important;}
-body.keyboard-open .input-row,
-#chat .input-row{
-  position:static!important;
-  bottom:auto!important;
-  z-index:auto!important;
-  background:transparent!important;
-  border:none!important;
-  box-shadow:none!important;
-  padding:0!important;
-  border-radius:0!important;
-  margin:0!important;
-}
-body.keyboard-open .input-row input,
-#chat .input-row input{
-  height:auto!important;
-}
-body.keyboard-open .send-btn,
-#chat .send-btn{
-  height:auto!important;
-  min-width:54px;
-}
-body.keyboard-open .bottom-nav{display:none!important;}
-
-@media(max-width:520px){
-  #chat .input-row{
-    position:static!important;
-    bottom:auto!important;
-    background:transparent!important;
-    padding:0!important;
-    border-radius:0!important;
-    margin:0!important;
-    z-index:auto!important;
-  }
-  #messages{
-    max-height:420px!important;
-    min-height:0!important;
-  }
-}
-
 </style>
 </head>
 
@@ -276,7 +186,6 @@ body.keyboard-open .bottom-nav{display:none!important;}
 
     <button class="ghost-btn" onclick="loginGoogle()">Continua con Google</button>
     <button class="auth-link-btn" onclick="resetPassword()">Password dimenticata?</button>
-    <button class="auth-install-btn" type="button" onclick="openInstallGuide()">📲 Come installare l’app</button>
     <div class="auth-sub" id="authError" style="margin-top:14px;color:#FF8C42"></div>
   </div>
 </div>
@@ -286,24 +195,9 @@ body.keyboard-open .bottom-nav{display:none!important;}
 <div class="brand"><div class="brand-icon">📡</div>GeoChat</div>
 <div class="top-actions">
 <button class="logout-btn" onclick="logout()">Logout</button>
-<button class="install-mini-btn" id="installMiniBtn" onclick="openInstallGuide()">📲 Installa</button>
 <button class="profile-btn" onclick="showPage('profile')" id="profileBtn">?</button>
 <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">☀️</button>
 </div>
-</div>
-
-<div class="install-card" id="installCard">
-  <div class="install-card-top">
-    <div>
-      <div class="install-card-title">📲 Installa GeoChat</div>
-      <div class="install-card-text" id="installCardText">Aggiungi l’app alla schermata Home per usarla meglio su iPhone e Android.</div>
-    </div>
-    <button class="install-close" onclick="dismissInstallCard()">×</button>
-  </div>
-  <div class="install-card-actions">
-    <button class="install-primary" id="installCardBtn" onclick="handleInstallClick()">Installa / guida</button>
-    <button class="install-secondary" onclick="dismissInstallCard()">Dopo</button>
-  </div>
 </div>
 
 <section id="page-chat" class="page active">
@@ -514,35 +408,6 @@ body.keyboard-open .bottom-nav{display:none!important;}
 <button id="nav-admin" class="nav-btn admin-only" onclick="showPage('admin')">👑<br>Admin</button>
 </nav>
 
-<div class="modal install-modal" id="installModal" style="z-index:6000">
-<div class="modal-card">
-<div class="modal-title">INSTALLA GEOCHAT</div>
-<div class="modal-sub" id="installModalSub">Usa GeoChat come app, senza aprire ogni volta il browser.</div>
-<div id="installAndroidBox" style="display:none">
-<button class="save-btn" onclick="triggerPwaInstall()">📲 Installa ora</button>
-<div class="modal-sub" style="margin-top:12px">Se il pulsante non parte, apri il menu del browser e scegli “Installa app” o “Aggiungi a schermata Home”.</div>
-</div>
-<div id="installIosBox" style="display:none">
-<ol class="install-steps">
-<li>Apri GeoChat con <b>Safari</b>.</li>
-<li>Tocca il tasto <b>Condividi</b> in basso.</li>
-<li>Scegli <b>Aggiungi alla schermata Home</b>.</li>
-<li>Premi <b>Aggiungi</b>.</li>
-</ol>
-<div class="modal-sub" style="margin-top:12px">Nota: su iPhone Chrome può mostrare la guida, ma l’installazione PWA completa si fa da Safari.</div>
-</div>
-<div id="installGenericBox" style="display:none">
-<ol class="install-steps">
-<li>Apri il menu del browser.</li>
-<li>Cerca “Installa app” oppure “Aggiungi a schermata Home”.</li>
-<li>Conferma l’installazione.</li>
-</ol>
-</div>
-<button class="ghost-btn" onclick="dismissInstallPopupForever()">Non mostrare più</button>
-<button class="close-btn" onclick="closeInstallGuide()">Chiudi</button>
-</div>
-</div>
-
 <div class="modal" id="profileModal">
 <div class="modal-card">
 <div class="modal-title">PROFILO</div>
@@ -560,20 +425,6 @@ body.keyboard-open .bottom-nav{display:none!important;}
 </div>
 </div>
 
-<div class="modal" id="notificationLoginModal" style="z-index:6500">
-  <div class="modal-card">
-    <div class="modal-title">🔔 Attiva notifiche</div>
-    <div class="modal-sub">Così GeoChat può avvisarti quando arrivano messaggi o quando entri in una zona.</div>
-    <div class="notify-permission-box">
-      <div><b>IMPORTANTE</b></div>
-      <div>Su iPhone le notifiche funzionano meglio dopo aver aggiunto GeoChat alla schermata Home.</div>
-      <div>Premi “Attiva notifiche” e consenti il permesso del browser.</div>
-    </div>
-    <button class="save-btn" onclick="acceptLoginNotifications()">🔔 Attiva notifiche</button>
-    <button class="ghost-btn" onclick="skipLoginNotifications()">Non ora</button>
-  </div>
-</div>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -582,11 +433,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, sendPasswordResetEmail
+  GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import {
-  getMessaging, getToken, onMessage, isSupported as isMessagingSupported
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 
 const firebaseConfig={
 apiKey:"AIzaSyD7cztFTFUz_zSiGeBbibzERV14KpKNhQw",
@@ -601,7 +449,6 @@ const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
 const auth=getAuth(app);
 const provider=new GoogleAuthProvider();
-provider.setCustomParameters({ prompt: "select_account" });
 const OWNER_UID="YO46psP0c9VIotrxUdNmEUevkZn1";
 const ADMIN_UID=OWNER_UID;
 let currentRole="user";
@@ -611,18 +458,6 @@ let isHelper=false;
 let roleMap={};
 const notifyAudio=new Audio("notifica.mp3");
 notifyAudio.preload="auto";
-let deferredInstallPrompt=null;
-
-/* === GEOCHAT PUSH VERE / FCM ===
-   Firebase Console → Project settings → Cloud Messaging → Web push certificates.
-   Genera una chiave VAPID e incollala qui sotto.
-*/
-const FCM_VAPID_KEY="BIM0ZWLb18TBRPpHXP6J-X8bHYmhvRIzvP-vjrbleKqtbYurSDYjor_iMShMdtzH1yV_1Fc-NWp0YBy7kUX5Xm4";
-let messaging=null;
-let messagingReady=false;
-let currentFcmToken="";
-let lastPushStateKey="";
-let fcmInitStarted=false;
 
 const DEFAULT_CENTER_LAT=40.61581525171119;
 const DEFAULT_CENTER_LNG=15.047397231044794;
@@ -707,21 +542,7 @@ const adminPanel=document.getElementById("adminPanel");
 if(adminPanel) adminPanel.style.display=isHelper?"block":"none";
 const ownerPanel=document.getElementById("ownerRolesPanel");
 if(ownerPanel) ownerPanel.style.display=isOwner?"block":"none";
-
-/* FIX AREA PERSONALIZZATA:
-   Alcuni blocchi admin hanno sia .admin-only che .helper-hidden (es. Gestione area).
-   Prima .helper-hidden cancellava il display:block e il pannello tornava display:none
-   per colpa di .admin-panel, quindi Owner/Admin non vedevano o non potevano usare
-   la creazione/modifica aree. Ora Helper li nasconde, Owner/Admin li vedono. */
-document.querySelectorAll(".helper-hidden").forEach(el=>{
-  if(isHelper && !isAdmin){
-    el.style.display="none";
-  }else if(el.classList.contains("admin-only")){
-    el.style.display=isHelper?"block":"none";
-  }else{
-    el.style.display="";
-  }
-});
+document.querySelectorAll(".helper-hidden").forEach(el=>el.style.display=(isHelper && !isAdmin)?"none":"");
 document.querySelectorAll(".helper-tool").forEach(el=>el.style.display=isHelper?"block":"none");
 const usersToolTitle=document.getElementById("usersToolTitle");
 if(usersToolTitle) usersToolTitle.innerText=(isAdmin?"👥 Utenti online / ban":"👥 Utenti online / timeout");
@@ -844,43 +665,15 @@ showAuthError("Email di recupero inviata. Controlla la posta.");
 }catch(e){showAuthError(e.message);}
 };
 
-function shouldUseGoogleRedirect(){
-const ua=navigator.userAgent||"";
-const isIOS=/iPad|iPhone|iPod/.test(ua) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
-const isMobile=/Android|iPhone|iPad|iPod/i.test(ua);
-const isStandalone=window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone===true;
-return isIOS || isMobile || isStandalone;
-}
-
 window.loginGoogle=async function(){
 try{
 clearAuthError();
-if(shouldUseGoogleRedirect()){
-await signInWithRedirect(auth,provider);
-return;
-}
 await signInWithPopup(auth,provider);
-}catch(e){
-console.log("google login error",e);
-try{
-await signInWithRedirect(auth,provider);
-}catch(err){
-console.log("google redirect error",err);
-showAuthError(err.message || e.message || "Errore login Google");
-}
-}
+}catch(e){showAuthError(e.message);}
 };
-
-getRedirectResult(auth).catch((e)=>{
-console.log("google redirect result error",e);
-showAuthError(e.message || "Errore completamento login Google");
-});
 
 window.logout=async function(){
 inside=false;
-try{
-  if(userId) await setDoc(doc(db,"pushTokens",userId),{inside:false,enabled:false,updatedAt:Date.now()},{merge:true});
-}catch(e){console.log("push logout update error",e);}
 await updatePresence();
 await signOut(auth);
 location.reload();
@@ -902,10 +695,6 @@ document.getElementById("authScreen").style.display="none";
 await loadProfile();
 startListeners();
 updatePresence();
-setTimeout(()=>{
-  setupMobileKeyboardFix();
-  maybeAskNotificationsAfterLogin();
-},700);
 }else{
 currentUser=null;
 userId=null;
@@ -919,18 +708,14 @@ activeBans={};
 activeTimeouts={};
 allTimeouts=[];
 allBannedUsers=[];
-if(unsubscribeMessages) unsubscribeMessages();
-if(unsubscribePresence) unsubscribePresence();
-if(unsubscribePinned) unsubscribePinned();
-if(unsubscribeOwnBan) unsubscribeOwnBan();
-if(unsubscribeBans) unsubscribeBans();
-if(unsubscribeTimeouts) unsubscribeTimeouts();
-if(unsubscribeAreas) unsubscribeAreas();
-if(unsubscribeRoles) unsubscribeRoles();
-if(unsubscribeRoles) unsubscribeRoles();
-if(unsubscribePinned) unsubscribePinned();
-if(unsubscribeOwnBan) unsubscribeOwnBan();
-if(unsubscribeBans) unsubscribeBans();
+if(unsubscribeMessages){unsubscribeMessages();unsubscribeMessages=null;}
+if(unsubscribePresence){unsubscribePresence();unsubscribePresence=null;}
+if(unsubscribePinned){unsubscribePinned();unsubscribePinned=null;}
+if(unsubscribeOwnBan){unsubscribeOwnBan();unsubscribeOwnBan=null;}
+if(unsubscribeBans){unsubscribeBans();unsubscribeBans=null;}
+if(unsubscribeTimeouts){unsubscribeTimeouts();unsubscribeTimeouts=null;}
+if(unsubscribeAreas){unsubscribeAreas();unsubscribeAreas=null;}
+if(unsubscribeRoles){unsubscribeRoles();unsubscribeRoles=null;}
 document.querySelectorAll(".admin-only").forEach(el=>el.style.display="none");
 document.getElementById("adminPanel").style.display="none";
 document.getElementById("authScreen").style.display="flex";
@@ -963,272 +748,6 @@ setTimeout(()=>openProfile(),500);
 }
 }
 
-function isIosDevice(){
-return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
-}
-function isStandaloneMode(){
-return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
-}
-function refreshInstallUI(){
-const card=document.getElementById('installCard');
-const mini=document.getElementById('installMiniBtn');
-const text=document.getElementById('installCardText');
-const btn=document.getElementById('installCardBtn');
-const installed=isStandaloneMode();
-const dismissed=localStorage.getItem('geochat_install_dismissed_v4')==='true';
-if(mini) mini.style.display=installed?'none':'inline-flex';
-if(card){
-card.classList.toggle('hide', installed || dismissed);
-}
-if(text){
-text.innerText=isIosDevice() ? 'Su iPhone installala da Safari: Condividi → Aggiungi alla schermata Home. Su Chrome iPhone puoi leggere la guida, ma per installarla usa Safari.' : 'Su Android puoi installarla come app, con icona nella schermata Home.';
-}
-if(btn) btn.innerText=deferredInstallPrompt ? '📲 Installa ora' : '📖 Vedi guida';
-}
-window.openInstallGuide=function(){
-const modal=document.getElementById('installModal');
-const androidBox=document.getElementById('installAndroidBox');
-const iosBox=document.getElementById('installIosBox');
-const genericBox=document.getElementById('installGenericBox');
-if(androidBox) androidBox.style.display=(!isIosDevice() && deferredInstallPrompt)?'block':'none';
-if(iosBox) iosBox.style.display=isIosDevice()?'block':'none';
-if(genericBox) genericBox.style.display=(!isIosDevice() && !deferredInstallPrompt)?'block':'none';
-if(modal) modal.style.display='flex';
-};
-window.closeInstallGuide=function(){
-const modal=document.getElementById('installModal');
-if(modal) modal.style.display='none';
-sessionStorage.setItem('geochat_install_popup_seen_v4','true');
-};
-window.dismissInstallPopupForever=function(){
-localStorage.setItem('geochat_install_dismissed_v4','true');
-sessionStorage.setItem('geochat_install_popup_seen_v4','true');
-closeInstallGuide();
-refreshInstallUI();
-};
-function shouldAutoShowInstallGuide(){
-if(isStandaloneMode())return false;
-if(localStorage.getItem('geochat_install_dismissed_v4')==='true')return false;
-if(sessionStorage.getItem('geochat_install_popup_seen_v4')==='true')return false;
-return true;
-}
-function autoShowInstallGuide(){
-if(!shouldAutoShowInstallGuide())return;
-sessionStorage.setItem('geochat_install_popup_seen_v4','true');
-setTimeout(()=>{
-if(!isStandaloneMode()) openInstallGuide();
-},900);
-}
-window.dismissInstallCard=function(){
-localStorage.setItem('geochat_install_dismissed_v4','true');
-refreshInstallUI();
-};
-window.handleInstallClick=function(){
-if(deferredInstallPrompt){triggerPwaInstall();}else{openInstallGuide();}
-};
-window.triggerPwaInstall=async function(){
-if(!deferredInstallPrompt){openInstallGuide();return;}
-try{
-deferredInstallPrompt.prompt();
-await deferredInstallPrompt.userChoice;
-deferredInstallPrompt=null;
-localStorage.setItem('geochat_install_dismissed_v4','true');
-refreshInstallUI();
-closeInstallGuide();
-}catch(e){console.log('install prompt error',e);openInstallGuide();}
-};
-window.addEventListener('beforeinstallprompt',function(e){
-e.preventDefault();
-deferredInstallPrompt=e;
-refreshInstallUI();
-});
-window.addEventListener('appinstalled',function(){
-deferredInstallPrompt=null;
-localStorage.setItem('geochat_install_dismissed_v4','true');
-refreshInstallUI();
-});
-function setupMobileKeyboardFix(){
-const input=document.getElementById('message');
-const messages=document.getElementById('messages');
-const sendBtn=document.querySelector('.send-btn');
-if(!input)return;
-
-function setKeyboardState(open){
-document.body.classList.toggle('keyboard-open', !!open);
-if(open && messages){
-setTimeout(()=>{messages.scrollTop=messages.scrollHeight;},80);
-}
-}
-
-/* Non ridimensioniamo più la viewport e non spostiamo l'input:
-   su iPhone/Android lasciamo lavorare la tastiera nativa del browser. */
-if(!input.dataset.keyboardFixBoundV7){
-input.dataset.keyboardFixBoundV7='true';
-input.addEventListener('focus',()=>setKeyboardState(true));
-input.addEventListener('blur',()=>setTimeout(()=>setKeyboardState(false),120));
-}
-
-/* Mantiene la tastiera aperta quando premi invio, ma NON blocca il tap.
-   Su iPhone il vecchio preventDefault su touchstart impediva l'onclick del bottone. */
-if(sendBtn && !sendBtn.dataset.keepKeyboardBoundV8){
-sendBtn.dataset.keepKeyboardBoundV8='true';
-
-// Desktop / mouse: evita perdita focus, il normale onclick invia il messaggio.
-sendBtn.addEventListener('mousedown',(e)=>{
-if(document.activeElement===input){
-e.preventDefault();
-window.__geochatKeepFocusAfterSend=true;
-}
-},{passive:false});
-
-// Mobile iPhone/Android: touchstart NON viene bloccato, altrimenti il bottone non invia.
-sendBtn.addEventListener('touchstart',()=>{
-window.__geochatTouchingSend=true;
-window.__geochatKeepFocusAfterSend=true;
-},{passive:true});
-
-// Mobile: invio manuale su touchend e blocco del click sintetico per evitare doppio invio.
-sendBtn.addEventListener('touchend',(e)=>{
-if(!window.__geochatTouchingSend)return;
-e.preventDefault();
-window.__geochatTouchingSend=false;
-try{ window.sendMessage(); }catch(err){ console.log('touch send error',err); }
-setTimeout(()=>{try{input.focus();}catch(err){}},40);
-},{passive:false});
-
-sendBtn.addEventListener('touchcancel',()=>{
-window.__geochatTouchingSend=false;
-},{passive:true});
-}
-
-/* Chiudi la tastiera solo quando tocchi fuori dalla riga messaggio. */
-if(!window.__geochatTapOutsideBoundV7){
-window.__geochatTapOutsideBoundV7=true;
-document.addEventListener('touchstart',(e)=>{
-if(document.activeElement!==input)return;
-const row=e.target.closest && e.target.closest('.input-row');
-const modal=e.target.closest && e.target.closest('.modal-card,.auth-card');
-if(!row && !modal) input.blur();
-},{passive:true});
-document.addEventListener('mousedown',(e)=>{
-if(document.activeElement!==input)return;
-const row=e.target.closest && e.target.closest('.input-row');
-const modal=e.target.closest && e.target.closest('.modal-card,.auth-card');
-if(!row && !modal) input.blur();
-});
-}
-setKeyboardState(document.activeElement===input);
-}
-
-
-async function initFirebaseMessaging(){
-if(fcmInitStarted)return messagingReady;
-fcmInitStarted=true;
-try{
-if(!('serviceWorker' in navigator)){console.log('FCM: service worker non supportato');return false;}
-if(typeof Notification==='undefined'){console.log('FCM: Notification API non supportata');return false;}
-if(FCM_VAPID_KEY.includes('INCOLLA_QUI')){console.warn('FCM: devi inserire la tua VAPID key in FCM_VAPID_KEY');return false;}
-const supported=await isMessagingSupported();
-if(!supported){console.log('FCM: messaging non supportato su questo browser');return false;}
-messaging=getMessaging(app);
-messagingReady=true;
-onMessage(messaging,(payload)=>{
-console.log('FCM foreground message',payload);
-const title=(payload.notification && payload.notification.title) || (payload.data && payload.data.title) || 'GeoChat';
-const body=(payload.notification && payload.notification.body) || (payload.data && payload.data.body) || 'Nuova notifica';
-if(document.visibilityState==='visible'){
-showToast(body);
-notifyNewMessage();
-}else{
-showSystemNotification(title,body);
-}
-});
-return true;
-}catch(e){console.log('FCM init error',e);return false;}
-}
-
-async function registerFcmToken(){
-if(!currentUser || !userId)return false;
-if(typeof Notification==='undefined' || Notification.permission!=='granted')return false;
-const ok=await initFirebaseMessaging();
-if(!ok)return false;
-try{
-const swReg=await navigator.serviceWorker.ready;
-const token=await getToken(messaging,{vapidKey:FCM_VAPID_KEY,serviceWorkerRegistration:swReg});
-if(!token){console.log('FCM: token non disponibile');return false;}
-currentFcmToken=token;
-await setDoc(doc(db,'pushTokens',userId),{
-uid:userId,token:token,enabled:true,inside:inside && !isBanned,areaId:currentAreaId,areaName:currentAreaName,
-name:profile.name||'',platform:isIosDevice()?'ios':'web',updatedAt:Date.now()
-},{merge:true});
-lastPushStateKey=[token,inside&&!isBanned,currentAreaId,currentAreaName].join('|');
-console.log('FCM: token salvato');
-return true;
-}catch(e){console.log('FCM token error',e);showToast('Notifiche push non completate: controlla VAPID key / HTTPS');return false;}
-}
-
-async function updatePushAreaState(){
-try{
-if(!currentUser || !userId)return;
-if(!systemNotificationsEnabled)return;
-if(typeof Notification==='undefined' || Notification.permission!=='granted')return;
-if(!currentFcmToken){await registerFcmToken();return;}
-const key=[currentFcmToken,inside&&!isBanned,currentAreaId,currentAreaName].join('|');
-if(key===lastPushStateKey)return;
-lastPushStateKey=key;
-await setDoc(doc(db,'pushTokens',userId),{
-uid:userId,token:currentFcmToken,enabled:true,inside:inside && !isBanned,areaId:currentAreaId,areaName:currentAreaName,
-name:profile.name||'',platform:isIosDevice()?'ios':'web',updatedAt:Date.now()
-},{merge:true});
-}catch(e){console.log('push state update error',e);}
-}
-
-function notificationsAlreadyHandled(){
-return localStorage.getItem('geochat_notifications_prompted_v1')==='true' || localStorage.getItem('geochat_notifications')==='true';
-}
-function canAskNotificationPermissionNow(){
-return typeof Notification!=='undefined' && Notification.permission==='default';
-}
-function maybeAskNotificationsAfterLogin(){
-if(!currentUser)return;
-refreshSettingsUI();
-if(notificationsAlreadyHandled())return;
-const modal=document.getElementById('notificationLoginModal');
-if(!modal)return;
-setTimeout(()=>{
-if(!currentUser)return;
-if(!notificationsAlreadyHandled()) modal.style.display='flex';
-},450);
-}
-window.acceptLoginNotifications=async function(){
-localStorage.setItem('geochat_notifications_prompted_v1','true');
-const modal=document.getElementById('notificationLoginModal');
-if(modal) modal.style.display='none';
-if(typeof Notification==='undefined'){
-showToast('Notifiche non supportate da questo browser');
-return;
-}
-if(Notification.permission==='granted'){
-systemNotificationsEnabled=true;
-localStorage.setItem('geochat_notifications','true');
-refreshSettingsUI();
-await registerFcmToken();
-showToast('Notifiche già attive');
-return;
-}
-if(Notification.permission==='denied'){
-showToast('Notifiche bloccate: abilita il permesso dalle impostazioni del browser');
-return;
-}
-await requestNotificationPermission();
-};
-window.skipLoginNotifications=function(){
-localStorage.setItem('geochat_notifications_prompted_v1','true');
-const modal=document.getElementById('notificationLoginModal');
-if(modal) modal.style.display='none';
-refreshSettingsUI();
-};
-
 function refreshSettingsUI(){
 document.getElementById("soundBtn").classList.toggle("active",soundEnabled);
 document.getElementById("vibrationBtn").classList.toggle("active",vibrationEnabled);
@@ -1246,8 +765,6 @@ window.toggleSound=function(){
 soundEnabled=!soundEnabled;
 localStorage.setItem("geochat_sound",soundEnabled);
 refreshSettingsUI();
-refreshInstallUI();
-setupMobileKeyboardFix();
 if(soundEnabled) playNotifySound();
 };
 
@@ -1309,7 +826,6 @@ return true;
 }
 
 window.requestNotificationPermission=async function(){
-localStorage.setItem("geochat_notifications_prompted_v1","true");
 if(typeof Notification==="undefined"){
 showToast("Notifiche non supportate da questo browser");
 return;
@@ -1321,7 +837,6 @@ localStorage.setItem("geochat_notifications",systemNotificationsEnabled?"true":"
 refreshSettingsUI();
 if(systemNotificationsEnabled){
 showToast("Notifiche attivate");
-await registerFcmToken();
 showSystemNotification("GeoChat", "Notifiche attivate");
 }else{
 showToast("Permesso notifiche non concesso");
@@ -1711,7 +1226,6 @@ areaId:currentAreaId,
 areaName:currentAreaName,
 lastSeen:Date.now()
 });
-await updatePushAreaState();
 }catch(e){console.log("presence error",e);}
 }
 
@@ -1799,6 +1313,7 @@ box.appendChild(row);
 }
 
 window.sendMessage=async function(){
+if(window.__geochatSendingMessage)return;
 if(!inside || isBanned)return;
 const activeTimeout=getActiveTimeout(userId);
 if(activeTimeout){
@@ -1818,9 +1333,11 @@ return;
 }
 
 const input=document.getElementById("message");
+if(!input)return;
 const msg=input.value.trim();
 if(msg==="")return;
 
+window.__geochatSendingMessage=true;
 try{
 await addDoc(collection(db,"messages"),{
 text:msg,
@@ -1833,17 +1350,16 @@ time:Date.now()
 });
 
 input.value="";
-setTimeout(()=>{try{input.focus();}catch(e){}},30);
 setTimeout(()=>{
-try{
-input.focus();
-const messages=document.getElementById("messages");
-if(messages) messages.scrollTop=messages.scrollHeight;
-}catch(e){}
-},50);
+if(window.__geochatKeepFocusAfterSend || document.body.classList.contains("keyboard-open")){
+try{input.focus();}catch(e){}
+}
+},40);
 }catch(e){
 console.log("send message error",e);
 alert("Errore invio messaggio. Controlla le regole Firebase aggiornate per areaId.");
+}finally{
+setTimeout(()=>{window.__geochatSendingMessage=false;},250);
 }
 };
 
@@ -1949,7 +1465,6 @@ const radius=Number(document.getElementById("newAreaRadiusInput").value);
 const color=getNewAreaColor();
 if(name.length<2){alert("Scrivi un nome area");return;}
 if(!radius || radius<1){alert("Inserisci un raggio valido");return;}
-try{
 await addDoc(collection(db,"areas"),{
 name:name,
 type:"radius",
@@ -1964,10 +1479,6 @@ createdBy:userId
 document.getElementById("newAreaNameInput").value="";
 document.getElementById("newAreaRadiusInput").value="";
 alert("Area creata");
-}catch(e){
-console.log("create radius area error",e);
-alert("Errore creazione area. Controlla che le regole Firebase permettano agli admin di scrivere in /areas.");
-}
 };
 
 function getNewAreaColor(){
@@ -2065,7 +1576,6 @@ const name=(document.getElementById("newAreaNameInput").value||"").trim();
 const color=getNewAreaColor();
 if(name.length<2){alert("Scrivi un nome area");return;}
 if(polygonDraftPoints.length<3){alert("Servono almeno 3 punti per creare un perimetro");return;}
-try{
 await addDoc(collection(db,"areas"),{
 name:name,
 type:"polygon",
@@ -2080,10 +1590,6 @@ polygonDraftPoints=[];
 selectedPolygonPointIndex=null;
 updateDraftPolygon();
 alert("Perimetro creato");
-}catch(e){
-console.log("create polygon area error",e);
-alert("Errore creazione perimetro. Controlla che le regole Firebase permettano agli admin di scrivere in /areas.");
-}
 };
 
 function updateDraftPolygon(){
@@ -2524,6 +2030,7 @@ box.appendChild(row);
 function renderMessages(){
 const container=document.getElementById("messages");
 if(!container)return;
+const wasNearBottom=(container.scrollHeight-container.scrollTop-container.clientHeight)<80;
 container.innerHTML="";
 const docs=latestMessageDocs.filter(docSnap=>{
 const data=docSnap.data();
@@ -2539,7 +2046,7 @@ const data=docSnap.data();
 const messageId=docSnap.id;
 const safeName=escapeHtml(data.name||"Utente");
 const safeText=escapeHtml(data.text||"");
-const avatar=data.avatar||"";
+const safeAvatar=escapeHtml(data.avatar||"");
 const isMe=data.userId===userId;
 
 const div=document.createElement("div");
@@ -2547,7 +2054,7 @@ div.className=isMe?"message-row me":"message-row other";
 
 div.innerHTML=`
 <div class="msg-avatar">
-${avatar?`<img src="${avatar}">`:safeName[0].toUpperCase()}
+${safeAvatar?`<img src="${safeAvatar}">`:safeName[0].toUpperCase()}
 </div>
 <div class="message-bubble">
 <div class="name">${isMe?"TU":safeName}</div>
@@ -2557,7 +2064,9 @@ ${isHelper?`<button class="delete-msg-btn" onclick="deleteMessage('${messageId}'
 `;
 container.appendChild(div);
 });
+if(wasNearBottom || firstSnapshot){
 container.scrollTop=container.scrollHeight;
+}
 }
 
 function renderAreasList(){
@@ -2600,12 +2109,14 @@ box.appendChild(row);
 refreshAdminAreaSelectUI();
 }
 function startListeners(){
-if(unsubscribeMessages) unsubscribeMessages();
-if(unsubscribePresence) unsubscribePresence();
-if(unsubscribePinned) unsubscribePinned();
-if(unsubscribeOwnBan) unsubscribeOwnBan();
-if(unsubscribeBans) unsubscribeBans();
-if(unsubscribeTimeouts) unsubscribeTimeouts();
+if(unsubscribeMessages){unsubscribeMessages();unsubscribeMessages=null;}
+if(unsubscribePresence){unsubscribePresence();unsubscribePresence=null;}
+if(unsubscribePinned){unsubscribePinned();unsubscribePinned=null;}
+if(unsubscribeOwnBan){unsubscribeOwnBan();unsubscribeOwnBan=null;}
+if(unsubscribeBans){unsubscribeBans();unsubscribeBans=null;}
+if(unsubscribeTimeouts){unsubscribeTimeouts();unsubscribeTimeouts=null;}
+if(unsubscribeAreas){unsubscribeAreas();unsubscribeAreas=null;}
+if(unsubscribeRoles){unsubscribeRoles();unsubscribeRoles=null;}
 
 unsubscribeRoles=onSnapshot(collection(db,"roles"),(snap)=>{
 roleMap={};
@@ -2883,11 +2394,6 @@ return div.innerHTML;
 refreshSettingsUI();
 refreshAreaAdminUI();
 refreshAdminAreaSelectUI();
-refreshInstallUI();
-setupMobileKeyboardFix();
-maybeAskNotificationsAfterLogin();
-autoShowInstallGuide();
-window.addEventListener("load",()=>setTimeout(autoShowInstallGuide,1200));
 </script>
 
 <script>
@@ -2907,7 +2413,7 @@ document.getElementById("themeBtn").innerText="🌙";
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("sw.js")
-      .then((reg) => { window.geochatSwRegistration=reg; console.log("GeoChat service worker registrato"); })
+      .then(() => console.log("GeoChat service worker registrato"))
       .catch(err => console.log("Errore service worker", err));
   });
 }
