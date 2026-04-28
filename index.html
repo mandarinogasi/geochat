@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8" />
-<title>GeoChat Pulse App</title>
+<title>GeoChat Pulse</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#FF8C42">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -254,7 +254,7 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 </div>
 </div>
 
-<div class="panel admin-panel admin-only" id="mapAdminPanel">
+<div class="panel admin-panel admin-only helper-hidden" id="mapAdminPanel">
 <div class="admin-title">🎛 Gestione area</div>
 <div class="admin-sub">Modifica il raggio e salva la tua posizione attuale come centro area.</div>
 <input class="admin-number" id="adminRadiusInput" type="number" min="0" step="1" placeholder="Raggio in metri" />
@@ -339,7 +339,7 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 <div class="admin-user-list" id="rolesList"></div>
 </div>
 
-<div class="admin-grid">
+<div class="admin-grid helper-hidden">
 <button class="admin-btn" onclick="clearChat()">🧹 Svuota chat</button>
 <button class="admin-btn secondary" onclick="resetPresence()">👥 Reset online</button>
 </div>
@@ -355,7 +355,7 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 <div class="admin-status" id="adminAreaSelectStatus">Modalità GPS automatica.</div>
 </div>
 
-<div class="admin-section">
+<div class="admin-section helper-hidden">
 <div class="admin-label">📌 Messaggio fissato</div>
 <textarea class="admin-input" id="pinnedInput" placeholder="Scrivi un messaggio admin da mostrare sopra la chat..."></textarea>
 <div class="admin-grid" style="margin-top:10px">
@@ -365,24 +365,30 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 </div>
 
 <div class="admin-section">
-<div class="admin-label">👥 Utenti online / ban</div>
-<div class="admin-sub">Puoi bannare o sbloccare utenti presenti nella zona.</div>
+<div class="admin-label" id="usersToolTitle">👥 Utenti online / moderazione</div>
+<div class="admin-sub" id="usersToolSub">Gestisci gli utenti presenti nella zona in base al tuo ruolo.</div>
 <div class="admin-user-list" id="adminUsersList"></div>
 </div>
 
-<div class="admin-section">
+<div class="admin-section helper-tool">
+<div class="admin-label">⏱ Timeout attivi</div>
+<div class="admin-sub">Gli utenti in timeout non possono scrivere finché non scade il tempo o finché non lo rimuovi manualmente.</div>
+<div class="admin-user-list" id="timeoutsList"></div>
+</div>
+
+<div class="admin-section helper-hidden">
 <div class="admin-label">🚫 Utenti bannati / sblocca</div>
 <div class="admin-sub">Qui restano visibili anche gli utenti bannati che non sono più online.</div>
 <div class="admin-user-list" id="bannedUsersList"></div>
 </div>
 
-<div class="admin-section">
+<div class="admin-section helper-hidden">
 <div class="admin-label">🗺️ Aree personalizzate</div>
 <div class="admin-sub">Ogni area attiva ha la sua chat. Puoi attivare, disattivare o eliminare le aree.</div>
 <div class="admin-user-list" id="areasList"></div>
 </div>
 
-<div class="admin-section">
+<div class="admin-section helper-hidden">
 <div class="admin-label">✏️ Modifica area esistente</div>
 <div class="admin-sub">Seleziona un’area già creata, modifica nome/colore/raggio o i punti del perimetro e salva.</div>
 <div id="editAreaBox" class="draw-mode-box">
@@ -495,11 +501,14 @@ let unsubscribePresence=null;
 let unsubscribePinned=null;
 let unsubscribeOwnBan=null;
 let unsubscribeBans=null;
+let unsubscribeTimeouts=null;
 let unsubscribeAreas=null;
 let unsubscribeRoles=null;
 let isBanned=false;
 let latestOnlineUsers=[];
 let activeBans={};
+let activeTimeouts={};
+let allTimeouts=[];
 let allBannedUsers=[];
 let map=null;
 let normalTileLayer=null;
@@ -533,6 +542,12 @@ const adminPanel=document.getElementById("adminPanel");
 if(adminPanel) adminPanel.style.display=isHelper?"block":"none";
 const ownerPanel=document.getElementById("ownerRolesPanel");
 if(ownerPanel) ownerPanel.style.display=isOwner?"block":"none";
+document.querySelectorAll(".helper-hidden").forEach(el=>el.style.display=(isHelper && !isAdmin)?"none":"");
+document.querySelectorAll(".helper-tool").forEach(el=>el.style.display=isHelper?"block":"none");
+const usersToolTitle=document.getElementById("usersToolTitle");
+if(usersToolTitle) usersToolTitle.innerText=(isAdmin?"👥 Utenti online / ban":"👥 Utenti online / timeout");
+const usersToolSub=document.getElementById("usersToolSub");
+if(usersToolSub) usersToolSub.innerText=(isAdmin?"Puoi bannare o sbloccare utenti presenti nella zona.":"Puoi dare timeout temporanei agli utenti presenti nella zona.");
 const roleBadge=document.getElementById("roleBadge");
 if(roleBadge) roleBadge.innerText="Ruolo: "+(isOwner?"OWNER 👑":isAdmin?"ADMIN 🛡️":isHelper?"HELPER 🔧":"USER");
 }
@@ -690,12 +705,15 @@ isHelper=false;
 isBanned=false;
 latestOnlineUsers=[];
 activeBans={};
+activeTimeouts={};
+allTimeouts=[];
 allBannedUsers=[];
 if(unsubscribeMessages) unsubscribeMessages();
 if(unsubscribePresence) unsubscribePresence();
 if(unsubscribePinned) unsubscribePinned();
 if(unsubscribeOwnBan) unsubscribeOwnBan();
 if(unsubscribeBans) unsubscribeBans();
+if(unsubscribeTimeouts) unsubscribeTimeouts();
 if(unsubscribeAreas) unsubscribeAreas();
 if(unsubscribeRoles) unsubscribeRoles();
 if(unsubscribeRoles) unsubscribeRoles();
@@ -1146,6 +1164,19 @@ return;
 
 document.getElementById("locked").innerText="🔒 Accesso consentito solo dentro l’area.";
 
+const activeTimeout=getActiveTimeout(userId);
+if(activeTimeout){
+document.getElementById("dot").classList.remove("ok");
+document.getElementById("statusText").innerText="TIMEOUT ATTIVO";
+document.getElementById("subStatus").innerText="Puoi rileggere la chat, ma non puoi scrivere";
+document.getElementById("chat").style.display="none";
+document.getElementById("locked").style.display="block";
+document.getElementById("locked").innerText="⏱ Sei in timeout. Riprova tra " + formatTimeoutLeft(activeTimeout.expiresAt);
+document.getElementById("chatBadge").innerText="TIMEOUT";
+const mst=document.getElementById("mapStatusText"); if(mst) mst.innerText="Timeout";
+return;
+}
+
 if(inside){
 document.getElementById("dot").classList.add("ok");
 document.getElementById("statusText").innerText="AREA SBLOCCATA";
@@ -1211,8 +1242,87 @@ updatePresence();
 
 navigator.geolocation.watchPosition(checkArea,gpsError,{enableHighAccuracy:true,maximumAge:3000,timeout:10000});
 
+function getActiveTimeout(uid){
+const t=activeTimeouts[uid];
+if(!t || t.active!==true)return null;
+if(typeof t.expiresAt==="number" && t.expiresAt>Date.now())return t;
+return null;
+}
+
+function formatTimeoutLeft(expiresAt){
+const left=Math.max(0,expiresAt-Date.now());
+const min=Math.ceil(left/60000);
+return min+" min";
+}
+
+window.timeoutUser=async function(uid,minutes){
+if(!isHelper || uid===OWNER_UID || uid===userId)return;
+const target=latestOnlineUsers.find(u=>u.uid===uid) || allTimeouts.find(u=>u.uid===uid);
+const targetRole=roleMap[uid] && roleMap[uid].role ? roleMap[uid].role : "user";
+if(targetRole==="admin" || targetRole==="helper"){
+alert("Non puoi mettere in timeout un altro moderatore.");
+return;
+}
+const mins=Number(minutes);
+if(!mins || mins<1)return;
+const name=target?target.name:"Utente";
+if(!confirm("Mettere in timeout " + (name||uid) + " per " + mins + " minuti?"))return;
+await setDoc(doc(db,"timeouts",uid),{
+name:name||"Utente",
+active:true,
+expiresAt:Date.now()+mins*60000,
+timeoutAt:Date.now(),
+timeoutBy:userId,
+reason:"manual"
+},{merge:true});
+};
+
+window.customTimeoutUser=async function(uid){
+if(!isHelper)return;
+const mins=prompt("Minuti di timeout:","10");
+if(mins===null)return;
+timeoutUser(uid,Number(mins));
+};
+
+window.removeTimeout=async function(uid){
+if(!isHelper)return;
+if(!confirm("Rimuovere il timeout a questo utente?"))return;
+await setDoc(doc(db,"timeouts",uid),{
+active:false,
+removedAt:Date.now(),
+removedBy:userId
+},{merge:true});
+};
+
+function renderTimeoutsList(){
+if(!isHelper)return;
+const box=document.getElementById("timeoutsList");
+if(!box)return;
+const active=allTimeouts.filter(t=>t.active===true && typeof t.expiresAt==="number" && t.expiresAt>Date.now());
+if(active.length===0){box.innerHTML=`<div class="admin-sub">Nessun timeout attivo.</div>`;return;}
+box.innerHTML="";
+active.forEach(t=>{
+const safeName=escapeHtml(t.name||"Utente");
+const row=document.createElement("div");
+row.className="admin-user";
+row.innerHTML=`
+<div class="admin-user-main">
+<div class="admin-user-name">${safeName}</div>
+<div class="admin-user-id">${t.uid} · scade tra ${formatTimeoutLeft(t.expiresAt)}</div>
+</div>
+<button class="admin-mini-btn unban" onclick="removeTimeout('${t.uid}')">Togli timeout</button>
+`;
+box.appendChild(row);
+});
+}
+
 window.sendMessage=async function(){
 if(!inside || isBanned)return;
+const activeTimeout=getActiveTimeout(userId);
+if(activeTimeout){
+alert("Sei in timeout. Riprova tra " + formatTimeoutLeft(activeTimeout.expiresAt));
+return;
+}
 
 if(!currentUser){
 alert("Devi fare login");
@@ -1855,15 +1965,32 @@ return;
 box.innerHTML="";
 latestOnlineUsers.forEach(u=>{
 const banned=activeBans[u.uid]===true;
+const timed=getActiveTimeout(u.uid);
+const targetRole=(u.uid===OWNER_UID)?"owner":((roleMap[u.uid]&&roleMap[u.uid].role)||"user");
+const isProtected=u.uid===OWNER_UID || targetRole==="admin" || targetRole==="helper";
 const safeName=escapeHtml(u.name||"Utente");
 const row=document.createElement("div");
 row.className="admin-user";
+let actions="";
+if(u.uid===OWNER_UID){
+ actions=`<span class="badge">OWNER</span>`;
+}else if(isAdmin){
+ actions=banned?`<button class="admin-mini-btn unban" onclick="unbanUser('${u.uid}')">Sblocca</button>`:`<button class="admin-mini-btn" onclick="banUser('${u.uid}')">Ban</button>`;
+}else if(isHelper){
+ if(isProtected){
+  actions=`<span class="badge">STAFF</span>`;
+ }else if(timed){
+  actions=`<button class="admin-mini-btn unban" onclick="removeTimeout('${u.uid}')">Togli timeout</button>`;
+ }else{
+  actions=`<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="admin-mini-btn" onclick="timeoutUser('${u.uid}',5)">5 min</button><button class="admin-mini-btn" onclick="timeoutUser('${u.uid}',15)">15 min</button><button class="admin-mini-btn" onclick="customTimeoutUser('${u.uid}')">Altro</button></div>`;
+ }
+}
 row.innerHTML=`
 <div class="admin-user-main">
-<div class="admin-user-name">${safeName} ${u.uid===OWNER_UID?"👑":""}</div>
-<div class="admin-user-id">${u.uid}</div>
+<div class="admin-user-name">${safeName} ${u.uid===OWNER_UID?"👑":targetRole==="admin"?"🛡️":targetRole==="helper"?"🔧":""}</div>
+<div class="admin-user-id">${u.uid}${timed?" · timeout " + formatTimeoutLeft(timed.expiresAt):""}</div>
 </div>
-${u.uid===OWNER_UID?`<span class="badge">OWNER</span>`:(banned?`<button class="admin-mini-btn unban" onclick="unbanUser('${u.uid}')">Sblocca</button>`:`<button class="admin-mini-btn" onclick="banUser('${u.uid}')">Ban</button>`)}
+${actions}
 `;
 box.appendChild(row);
 });
@@ -1934,7 +2061,7 @@ container.scrollTop=container.scrollHeight;
 }
 
 function renderAreasList(){
-if(!isHelper)return;
+if(!isAdmin)return;
 const box=document.getElementById("areasList");
 if(!box)return;
 if(customAreas.length===0){
@@ -1978,6 +2105,7 @@ if(unsubscribePresence) unsubscribePresence();
 if(unsubscribePinned) unsubscribePinned();
 if(unsubscribeOwnBan) unsubscribeOwnBan();
 if(unsubscribeBans) unsubscribeBans();
+if(unsubscribeTimeouts) unsubscribeTimeouts();
 
 unsubscribeRoles=onSnapshot(collection(db,"roles"),(snap)=>{
 roleMap={};
@@ -1986,6 +2114,7 @@ if(userId!==OWNER_UID && roleMap[userId]) applyRole(roleMap[userId].role);
 if(userId!==OWNER_UID && !roleMap[userId]) applyRole("user");
 renderRolesList();
 renderAdminUsers();
+renderTimeoutsList();
 renderAreasList();
 });
 
@@ -2015,6 +2144,20 @@ renderAccessState();
 updatePresence();
 });
 
+unsubscribeTimeouts=onSnapshot(collection(db,"timeouts"),(snap)=>{
+activeTimeouts={};
+allTimeouts=[];
+snap.forEach(d=>{
+const data=d.data();
+const item={uid:d.id,name:data.name||"Utente",active:data.active===true,expiresAt:data.expiresAt||0,timeoutBy:data.timeoutBy||""};
+allTimeouts.push(item);
+if(item.active && item.expiresAt>Date.now()) activeTimeouts[d.id]=item;
+});
+renderAccessState();
+renderAdminUsers();
+renderTimeoutsList();
+});
+
 if(isHelper){
 unsubscribeBans=onSnapshot(collection(db,"bans"),(snap)=>{
 activeBans={};
@@ -2025,6 +2168,7 @@ activeBans[d.id]=data.active===true;
 allBannedUsers.push({uid:d.id,name:data.name||"Utente",active:data.active===true});
 });
 renderAdminUsers();
+renderTimeoutsList();
 renderBannedUsers();
 });
 }
@@ -2088,6 +2232,7 @@ latestOnlineUsers.push({uid:docSnap.id,name:data.name||"Utente",areaId:presenceA
 
 document.getElementById("onlineBadge").innerText="👥 "+count;
 renderAdminUsers();
+renderTimeoutsList();
 renderBannedUsers();
 });
 }
