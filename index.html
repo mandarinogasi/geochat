@@ -324,7 +324,20 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 <section id="page-admin" class="page admin-only">
 <div class="panel admin-panel" id="adminPanel">
 <div class="admin-title">👑 ADMIN PANEL</div>
-<div class="admin-sub">Controlli visibili solo all’admin.</div>
+<div class="admin-sub" id="roleBadge">Ruolo: caricamento...</div>
+
+<div class="admin-section owner-only" id="ownerRolesPanel" style="display:none">
+<div class="admin-label">🧬 Gerarchia ruoli</div>
+<div class="admin-sub">Solo l’Owner può assegnare o rimuovere ruoli. Admin e Helper non possono promuovere altri utenti.</div>
+<input class="admin-number" id="roleUidInput" type="text" placeholder="UID utente da promuovere" />
+<select class="admin-select" id="roleSelect" style="margin-top:10px">
+<option value="helper">Helper</option>
+<option value="admin">Admin</option>
+<option value="user">Rimuovi ruolo</option>
+</select>
+<button class="save-btn" onclick="saveUserRole()">💾 Salva ruolo</button>
+<div class="admin-user-list" id="rolesList"></div>
+</div>
 
 <div class="admin-grid">
 <button class="admin-btn" onclick="clearChat()">🧹 Svuota chat</button>
@@ -430,8 +443,13 @@ const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
 const auth=getAuth(app);
 const provider=new GoogleAuthProvider();
-const ADMIN_UID="YO46psP0c9VIotrxUdNmEUevkZn1";
+const OWNER_UID="YO46psP0c9VIotrxUdNmEUevkZn1";
+const ADMIN_UID=OWNER_UID;
+let currentRole="user";
+let isOwner=false;
 let isAdmin=false;
+let isHelper=false;
+let roleMap={};
 const notifyAudio=new Audio("notifica.mp3");
 notifyAudio.preload="auto";
 
@@ -478,6 +496,7 @@ let unsubscribePinned=null;
 let unsubscribeOwnBan=null;
 let unsubscribeBans=null;
 let unsubscribeAreas=null;
+let unsubscribeRoles=null;
 let isBanned=false;
 let latestOnlineUsers=[];
 let activeBans={};
@@ -502,6 +521,66 @@ let lastPinnedTextByArea={};
 let notificationCooldowns={};
 
 const nicknameInput=document.getElementById("nickname");
+let profileSetupRequired=false;
+
+function applyRole(role){
+currentRole=(userId===OWNER_UID)?"owner":(role||"user");
+isOwner=currentRole==="owner";
+isAdmin=isOwner || currentRole==="admin";
+isHelper=isAdmin || currentRole==="helper";
+document.querySelectorAll(".admin-only").forEach(el=>el.style.display=isHelper?"block":"none");
+const adminPanel=document.getElementById("adminPanel");
+if(adminPanel) adminPanel.style.display=isHelper?"block":"none";
+const ownerPanel=document.getElementById("ownerRolesPanel");
+if(ownerPanel) ownerPanel.style.display=isOwner?"block":"none";
+const roleBadge=document.getElementById("roleBadge");
+if(roleBadge) roleBadge.innerText="Ruolo: "+(isOwner?"OWNER 👑":isAdmin?"ADMIN 🛡️":isHelper?"HELPER 🔧":"USER");
+}
+
+async function loadCurrentRole(){
+try{
+if(userId===OWNER_UID){applyRole("owner");return;}
+const snap=await getDoc(doc(db,"roles",userId));
+applyRole(snap.exists()?snap.data().role:"user");
+}catch(e){console.log("role load error",e);applyRole("user");}
+}
+
+function renderRolesList(){
+const box=document.getElementById("rolesList");
+if(!box || !isOwner)return;
+const entries=Object.entries(roleMap).filter(([uid,data])=>data && data.role && data.role!=="user");
+if(entries.length===0){box.innerHTML=`<div class="admin-sub">Nessun ruolo assegnato.</div>`;return;}
+box.innerHTML="";
+entries.forEach(([uid,data])=>{
+const row=document.createElement("div");
+row.className="admin-user";
+row.innerHTML=`
+<div class="admin-user-main">
+<div class="admin-user-name">${escapeHtml((data.role||"user").toUpperCase())}</div>
+<div class="admin-user-id">${uid}</div>
+</div>
+<button class="admin-mini-btn" onclick="removeUserRole('${uid}')">Rimuovi</button>
+`;
+box.appendChild(row);
+});
+}
+
+window.saveUserRole=async function(){
+if(!isOwner)return;
+const uid=(document.getElementById("roleUidInput").value||"").trim();
+const role=(document.getElementById("roleSelect").value||"user").trim();
+if(!uid){alert("Inserisci UID utente");return;}
+if(uid===OWNER_UID){alert("L’Owner non può essere modificato");return;}
+if(!["user","helper","admin"].includes(role)){alert("Ruolo non valido");return;}
+await setDoc(doc(db,"roles",uid),{role:role,updatedAt:Date.now(),updatedBy:userId},{merge:true});
+alert(role==="user"?"Ruolo rimosso":"Ruolo assegnato: "+role);
+};
+
+window.removeUserRole=async function(uid){
+if(!isOwner || uid===OWNER_UID)return;
+if(!confirm("Rimuovere il ruolo a questo utente?"))return;
+await setDoc(doc(db,"roles",uid),{role:"user",updatedAt:Date.now(),updatedBy:userId},{merge:true});
+};
 
 function normalizeUsername(name){
 return (name||"").trim().toLowerCase().replace(/\s+/g,"_").replace(/[^a-z0-9_.-]/g,"").slice(0,30);
@@ -596,9 +675,7 @@ onAuthStateChanged(auth,async(user)=>{
 if(user){
 currentUser=user;
 userId=user.uid;
-isAdmin=(userId===ADMIN_UID);
-document.querySelectorAll(".admin-only").forEach(el=>el.style.display=isAdmin?"block":"none");
-document.getElementById("adminPanel").style.display=isAdmin?"block":"none";
+await loadCurrentRole();
 document.getElementById("authScreen").style.display="none";
 await loadProfile();
 startListeners();
@@ -606,7 +683,10 @@ updatePresence();
 }else{
 currentUser=null;
 userId=null;
+currentRole="user";
+isOwner=false;
 isAdmin=false;
+isHelper=false;
 isBanned=false;
 latestOnlineUsers=[];
 activeBans={};
@@ -617,6 +697,8 @@ if(unsubscribePinned) unsubscribePinned();
 if(unsubscribeOwnBan) unsubscribeOwnBan();
 if(unsubscribeBans) unsubscribeBans();
 if(unsubscribeAreas) unsubscribeAreas();
+if(unsubscribeRoles) unsubscribeRoles();
+if(unsubscribeRoles) unsubscribeRoles();
 if(unsubscribePinned) unsubscribePinned();
 if(unsubscribeOwnBan) unsubscribeOwnBan();
 if(unsubscribeBans) unsubscribeBans();
@@ -632,11 +714,13 @@ const snap=await getDoc(ref);
 
 if(snap.exists()){
 profile=snap.data();
+profileSetupRequired=!profile.name;
 }else{
 profile={
-name: currentUser.displayName || "",
+name:"",
 avatar: currentUser.photoURL || ""
 };
+profileSetupRequired=true;
 }
 
 nicknameInput.value=profile.name||"";
@@ -645,7 +729,7 @@ if(profile.name && currentUser && currentUser.email){
 await syncUsernameMapping(profile.name,currentUser.email);
 }
 
-if(!profile.name){
+if(profileSetupRequired){
 setTimeout(()=>openProfile(),500);
 }
 }
@@ -821,6 +905,10 @@ document.getElementById("profileModal").style.display="flex";
 };
 
 window.closeProfile=function(){
+if(profileSetupRequired && !profile.name){
+alert("Prima crea il tuo profilo per continuare");
+return;
+}
 if(profile.name){
 document.getElementById("profileModal").style.display="none";
 }
@@ -843,6 +931,7 @@ if(currentUser && currentUser.email){
 await syncUsernameMapping(profile.name,currentUser.email);
 }
 
+profileSetupRequired=false;
 refreshProfileUI();
 document.getElementById("profileModal").style.display="none";
 await updatePresence();
@@ -918,7 +1007,7 @@ return candidates;
 function updateCurrentAreaFromPosition(){
 const previousAreaId=currentAreaId;
 
-if(isAdmin && adminManualAreaId){
+if(isHelper && adminManualAreaId){
 const manualArea=getAreaById(adminManualAreaId);
 if(manualArea){
 currentAreaId=manualArea.id;
@@ -973,7 +1062,7 @@ return customAreas.find(a=>a.id===areaId)||null;
 }
 
 function refreshAdminAreaSelectUI(){
-if(!isAdmin)return;
+if(!isHelper)return;
 const select=document.getElementById("adminAreaSelect");
 const status=document.getElementById("adminAreaSelectStatus");
 if(!select)return;
@@ -992,7 +1081,7 @@ status.innerText=adminManualAreaId ? `Modalità admin: stai controllando ${admin
 }
 
 window.adminEnterSelectedArea=function(){
-if(!isAdmin)return;
+if(!isHelper)return;
 const select=document.getElementById("adminAreaSelect");
 if(!select)return;
 const areaId=select.value;
@@ -1023,14 +1112,14 @@ showPage("chat");
 };
 
 window.adminSelectArea=function(areaId){
-if(!isAdmin)return;
+if(!isHelper)return;
 const select=document.getElementById("adminAreaSelect");
 if(select) select.value=areaId;
 adminEnterSelectedArea();
 };
 
 window.adminExitManualArea=function(){
-if(!isAdmin)return;
+if(!isHelper)return;
 adminManualAreaId=null;
 adminManualAreaName="";
 updateCurrentAreaFromPosition();
@@ -1159,7 +1248,7 @@ alert("Errore invio messaggio. Controlla le regole Firebase aggiornate per areaI
 };
 
 window.deleteMessage=async function(messageId){
-if(!isAdmin)return;
+if(!isHelper)return;
 if(!confirm("Eliminare questo messaggio?"))return;
 await deleteDoc(doc(db,"messages",messageId));
 };
@@ -1185,7 +1274,7 @@ alert("Presenze resettate");
 };
 
 window.banUser=async function(uid){
-if(!isAdmin || uid===ADMIN_UID)return;
+if(!isAdmin || uid===OWNER_UID)return;
 const target=latestOnlineUsers.find(u=>u.uid===uid);
 const name=target?target.name:"Utente";
 if(!confirm("Bannare " + (name || uid) + "?"))return;
@@ -1756,7 +1845,7 @@ renderPinnedBanner();
 };
 
 function renderAdminUsers(){
-if(!isAdmin)return;
+if(!isHelper)return;
 const box=document.getElementById("adminUsersList");
 if(!box)return;
 if(latestOnlineUsers.length===0){
@@ -1771,17 +1860,17 @@ const row=document.createElement("div");
 row.className="admin-user";
 row.innerHTML=`
 <div class="admin-user-main">
-<div class="admin-user-name">${safeName} ${u.uid===ADMIN_UID?"👑":""}</div>
+<div class="admin-user-name">${safeName} ${u.uid===OWNER_UID?"👑":""}</div>
 <div class="admin-user-id">${u.uid}</div>
 </div>
-${u.uid===ADMIN_UID?`<span class="badge">ADMIN</span>`:(banned?`<button class="admin-mini-btn unban" onclick="unbanUser('${u.uid}')">Sblocca</button>`:`<button class="admin-mini-btn" onclick="banUser('${u.uid}')">Ban</button>`)}
+${u.uid===OWNER_UID?`<span class="badge">OWNER</span>`:(banned?`<button class="admin-mini-btn unban" onclick="unbanUser('${u.uid}')">Sblocca</button>`:`<button class="admin-mini-btn" onclick="banUser('${u.uid}')">Ban</button>`)}
 `;
 box.appendChild(row);
 });
 }
 
 function renderBannedUsers(){
-if(!isAdmin)return;
+if(!isHelper)return;
 const box=document.getElementById("bannedUsersList");
 if(!box)return;
 const banned=allBannedUsers.filter(u=>u.active===true);
@@ -1836,7 +1925,7 @@ ${avatar?`<img src="${avatar}">`:safeName[0].toUpperCase()}
 <div class="message-bubble">
 <div class="name">${isMe?"TU":safeName}</div>
 <div class="text">${safeText}</div>
-${isAdmin?`<button class="delete-msg-btn" onclick="deleteMessage('${messageId}')">Elimina</button>`:""}
+${isHelper?`<button class="delete-msg-btn" onclick="deleteMessage('${messageId}')">Elimina</button>`:""}
 </div>
 `;
 container.appendChild(div);
@@ -1845,7 +1934,7 @@ container.scrollTop=container.scrollHeight;
 }
 
 function renderAreasList(){
-if(!isAdmin)return;
+if(!isHelper)return;
 const box=document.getElementById("areasList");
 if(!box)return;
 if(customAreas.length===0){
@@ -1890,6 +1979,16 @@ if(unsubscribePinned) unsubscribePinned();
 if(unsubscribeOwnBan) unsubscribeOwnBan();
 if(unsubscribeBans) unsubscribeBans();
 
+unsubscribeRoles=onSnapshot(collection(db,"roles"),(snap)=>{
+roleMap={};
+snap.forEach(d=>{roleMap[d.id]=d.data();});
+if(userId!==OWNER_UID && roleMap[userId]) applyRole(roleMap[userId].role);
+if(userId!==OWNER_UID && !roleMap[userId]) applyRole("user");
+renderRolesList();
+renderAdminUsers();
+renderAreasList();
+});
+
 unsubscribePinned=onSnapshot(doc(db,"appConfig","main"),(snap)=>{
 const data=snap.exists()?snap.data():{};
 latestAppConfig=data;
@@ -1902,7 +2001,7 @@ if(latestUserLat!==null && latestUserLng!==null){
 updateCurrentAreaFromPosition();
 renderAccessState();
 updatePresence();
-}else if(isAdmin && adminManualAreaId){
+}else if(isHelper && adminManualAreaId){
 updateCurrentAreaFromPosition();
 renderAccessState();
 updatePresence();
@@ -1916,7 +2015,7 @@ renderAccessState();
 updatePresence();
 });
 
-if(isAdmin){
+if(isHelper){
 unsubscribeBans=onSnapshot(collection(db,"bans"),(snap)=>{
 activeBans={};
 allBannedUsers=[];
