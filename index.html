@@ -332,6 +332,7 @@ const DEFAULT_RADIUS=15;
 let areaCenterLat=DEFAULT_CENTER_LAT;
 let areaCenterLng=DEFAULT_CENTER_LNG;
 let areaRadius=DEFAULT_RADIUS;
+let currentAreaId="main";
 let latestUserLat=null;
 let latestUserLng=null;
 
@@ -674,6 +675,7 @@ text:msg,
 name:profile.name,
 avatar:profile.avatar||"",
 userId:userId,
+areaId:currentAreaId,
 time:Date.now()
 });
 
@@ -897,7 +899,11 @@ renderBannedUsers();
 });
 }
 
-const messagesQuery=query(collection(db,"messages"),orderBy("time"));
+const messagesQuery=query(
+collection(db,"messages"),
+where("areaId","==",currentAreaId),
+orderBy("time")
+);
 
 unsubscribeMessages=onSnapshot(messagesQuery,(snapshot)=>{
 const container=document.getElementById("messages");
