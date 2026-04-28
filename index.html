@@ -145,8 +145,8 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 .point-list div{padding:3px 0;border-bottom:1px solid rgba(255,255,255,.06)}
 .point-list div:last-child{border-bottom:none}
 .point-list div.selected{color:var(--deep-orange);font-weight:800}
-.draft-point-marker{width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 12px rgba(0,0,0,.45);transform:translate(-9px,-9px)}
-.draft-point-marker.selected{width:24px;height:24px;border:3px solid var(--deep-orange);box-shadow:0 0 18px var(--glow);transform:translate(-12px,-12px)}
+.draft-point-marker{width:26px;height:26px;border-radius:50%;border:4px solid #fff;box-shadow:0 0 14px rgba(0,0,0,.55);transform:translate(-13px,-13px);touch-action:none}
+.draft-point-marker.selected{width:34px;height:34px;border:4px solid var(--deep-orange);box-shadow:0 0 22px var(--glow);transform:translate(-17px,-17px);touch-action:none}
 @keyframes scan{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 @keyframes pulse{0%,100%{transform:scale(.96);opacity:.5}50%{transform:scale(1.05);opacity:1}}
 @keyframes pop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
@@ -455,6 +455,8 @@ let normalTileLayer=null;
 let satelliteTileLayer=null;
 let currentMapLayer="normal";
 let shouldAutoFitMap=true;
+let lastMapInteractionAt=0;
+let latestAppConfig={};
 let userMarker=null;
 let areaCircle=null;
 
@@ -726,6 +728,8 @@ document.getElementById("distanceText").innerText="ADMIN";
 if(previousAreaId!==currentAreaId){
 firstSnapshot=true;
 renderMessages();
+renderPinnedBanner();
+renderAdminUsers();
 }
 refreshAdminAreaSelectUI();
 return;
@@ -753,6 +757,8 @@ document.getElementById("distanceText").innerText=distance.toFixed(2)+" m";
 if(previousAreaId!==currentAreaId){
 firstSnapshot=true;
 renderMessages();
+renderPinnedBanner();
+renderAdminUsers();
 }
 refreshAdminAreaSelectUI();
 }
@@ -804,6 +810,8 @@ document.getElementById("distanceText").innerText="ADMIN";
 if(previousAreaId!==currentAreaId){
 firstSnapshot=true;
 renderMessages();
+renderPinnedBanner();
+renderAdminUsers();
 }
 renderAccessState();
 updatePresence();
@@ -896,6 +904,8 @@ try{
 await setDoc(doc(db,"presence",userId),{
 name:profile.name||"",
 inside:inside && !isBanned,
+areaId:currentAreaId,
+areaName:currentAreaName,
 lastSeen:Date.now()
 });
 }catch(e){console.log("presence error",e);}
@@ -1148,8 +1158,8 @@ function makeDraftPointIcon(color,selected){
 return L.divIcon({
 className:"",
 html:`<div class="draft-point-marker ${selected?"selected":""}" style="background:${color}"></div>`,
-iconSize:selected?[24,24]:[18,18],
-iconAnchor:selected?[12,12]:[9,9]
+iconSize:selected?[34,34]:[26,26],
+iconAnchor:selected?[17,17]:[13,13]
 });
 }
 
@@ -1276,25 +1286,53 @@ const cText=document.getElementById("centerText"); if(cText) cText.innerText=are
 const modeText=document.getElementById("areaModeText"); if(modeText) modeText.innerText=currentAreaName;
 }
 
+function renderPinnedBanner(){
+const pinnedByArea=latestAppConfig.pinnedByArea || {};
+let text=(pinnedByArea[currentAreaId] || "").trim();
+// Compatibilità con i vecchi avvisi globali: li mostra solo nella main.
+if(!text && currentAreaId==="main") text=(latestAppConfig.pinnedText || "").trim();
+const banner=document.getElementById("pinnedBanner");
+if(text){
+banner.innerHTML=`<b>ADMIN</b> ${escapeHtml(text)}`;
+banner.style.display="block";
+}else{
+banner.innerHTML="";
+banner.style.display="none";
+}
+if(isAdmin){
+const input=document.getElementById("pinnedInput");
+if(input) input.value=text;
+}
+}
 
 window.savePinnedMessage=async function(){
 if(!isAdmin)return;
 const text=document.getElementById("pinnedInput").value.trim();
-await setDoc(doc(db,"appConfig","main"),{
-pinnedText:text,
+const pinnedByArea={...(latestAppConfig.pinnedByArea || {})};
+pinnedByArea[currentAreaId]=text;
+const payload={
+pinnedByArea:pinnedByArea,
 updatedAt:Date.now(),
 updatedBy:userId
-},{merge:true});
+};
+// Manteniamo il vecchio campo per compatibilità, ma solo per la main.
+if(currentAreaId==="main") payload.pinnedText=text;
+await setDoc(doc(db,"appConfig","main"),payload,{merge:true});
 };
 
 window.clearPinnedMessage=async function(){
 if(!isAdmin)return;
-await setDoc(doc(db,"appConfig","main"),{
-pinnedText:"",
+const pinnedByArea={...(latestAppConfig.pinnedByArea || {})};
+pinnedByArea[currentAreaId]="";
+const payload={
+pinnedByArea:pinnedByArea,
 updatedAt:Date.now(),
 updatedBy:userId
-},{merge:true});
+};
+if(currentAreaId==="main") payload.pinnedText="";
+await setDoc(doc(db,"appConfig","main"),payload,{merge:true});
 document.getElementById("pinnedInput").value="";
+renderPinnedBanner();
 };
 
 function renderAdminUsers(){
@@ -1302,7 +1340,7 @@ if(!isAdmin)return;
 const box=document.getElementById("adminUsersList");
 if(!box)return;
 if(latestOnlineUsers.length===0){
-box.innerHTML=`<div class="admin-sub">Nessun utente online.</div>`;
+box.innerHTML=`<div class="admin-sub">Nessun utente online in questa area.</div>`;
 return;
 }
 box.innerHTML="";
@@ -1433,6 +1471,7 @@ if(unsubscribeBans) unsubscribeBans();
 
 unsubscribePinned=onSnapshot(doc(db,"appConfig","main"),(snap)=>{
 const data=snap.exists()?snap.data():{};
+latestAppConfig=data;
 if(typeof data.areaCenterLat==="number") areaCenterLat=data.areaCenterLat;
 if(typeof data.areaCenterLng==="number") areaCenterLng=data.areaCenterLng;
 if(typeof data.areaRadius==="number") areaRadius=data.areaRadius;
@@ -1447,18 +1486,7 @@ updateCurrentAreaFromPosition();
 renderAccessState();
 updatePresence();
 }
-const text=(data.pinnedText||"").trim();
-const banner=document.getElementById("pinnedBanner");
-if(text){
-banner.innerHTML=`<b>ADMIN</b> ${escapeHtml(text)}`;
-banner.style.display="block";
-}else{
-banner.innerHTML="";
-banner.style.display="none";
-}
-if(isAdmin){
-document.getElementById("pinnedInput").value=text;
-}
+renderPinnedBanner();
 });
 
 unsubscribeOwnBan=onSnapshot(doc(db,"bans",userId),(snap)=>{
@@ -1524,9 +1552,10 @@ let count=0;
 latestOnlineUsers=[];
 snapshot.forEach(docSnap=>{
 const data=docSnap.data();
-if(data.lastSeen && now-data.lastSeen<45000){
+const presenceAreaId=data.areaId || "main";
+if(data.lastSeen && now-data.lastSeen<45000 && presenceAreaId===currentAreaId){
 count++;
-latestOnlineUsers.push({uid:docSnap.id,name:data.name||"Utente",lastSeen:data.lastSeen});
+latestOnlineUsers.push({uid:docSnap.id,name:data.name||"Utente",areaId:presenceAreaId,areaName:data.areaName||currentAreaName,lastSeen:data.lastSeen});
 }
 });
 
@@ -1554,8 +1583,10 @@ if(map || typeof L==='undefined') return;
 map=L.map('map',{zoomControl:true});
 normalTileLayer=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
 satelliteTileLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'});
-map.on('dragstart zoomstart',function(){shouldAutoFitMap=false;});
+map.on('dragstart zoomstart movestart',function(){shouldAutoFitMap=false;lastMapInteractionAt=Date.now();});
 map.on('click',function(e){
+if(Date.now()-lastMapInteractionAt<250)return;
+if(e.originalEvent && e.originalEvent.defaultPrevented)return;
 if(isAdmin && createAreaMode==="polygon" && mapPointMode){
 addPolygonPoint(e.latlng.lat,e.latlng.lng,"map");
 }
