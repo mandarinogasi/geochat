@@ -127,6 +127,15 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 .profile-card{text-align:center}
 .profile-email{color:var(--muted);font-size:13px;margin-top:8px;word-break:break-all}
 .leaflet-container{font-family:Inter,Arial,sans-serif}
+
+.draw-mode-box{border:1px solid var(--line);background:rgba(255,255,255,.05);border-radius:18px;padding:12px;margin-top:10px}
+.draw-mode-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.draw-tab{border:1px solid var(--line);background:var(--bubble);color:var(--text);border-radius:14px;padding:10px;font-weight:800;cursor:pointer}
+.draw-tab.active{background:rgba(255,140,66,.18);color:var(--deep-orange)}
+.draw-help{font-size:12px;color:var(--muted);line-height:1.45;margin:8px 0}
+.point-list{font-size:12px;color:var(--muted);margin-top:8px;max-height:90px;overflow:auto;border:1px solid var(--line);border-radius:14px;padding:8px;background:rgba(0,0,0,.12)}
+.point-list div{padding:3px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.point-list div:last-child{border-bottom:none}
 @keyframes scan{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 @keyframes pulse{0%,100%{transform:scale(.96);opacity:.5}50%{transform:scale(1.05);opacity:1}}
 @keyframes pop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
@@ -229,11 +238,35 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 </div>
 
 <div class="admin-section">
-<div class="admin-label">➕ Crea nuova area raggio</div>
-<div class="admin-sub">Usa la tua posizione attuale come centro e crea una chat separata.</div>
+<div class="admin-label">➕ Crea nuova area</div>
+<div class="admin-sub">Crea una chat separata con raggio oppure con perimetro personalizzato disegnato sulla mappa.</div>
 <input class="admin-number" id="newAreaNameInput" type="text" placeholder="Nome area es. Piazza Centro" />
-<input class="admin-number" id="newAreaRadiusInput" type="number" min="1" step="1" placeholder="Raggio in metri" style="margin-top:10px" />
-<button class="save-btn" onclick="createRadiusArea()">➕ Crea area</button>
+
+<div class="draw-mode-box">
+<div class="draw-mode-tabs">
+<button class="draw-tab active" id="radiusModeBtn" onclick="setAreaCreateMode('radius')">🔵 Raggio</button>
+<button class="draw-tab" id="polygonModeBtn" onclick="setAreaCreateMode('polygon')">🔶 Perimetro</button>
+</div>
+
+<div id="radiusCreateBox">
+<div class="draw-help">Usa la tua posizione GPS attuale come centro e crea un'area circolare.</div>
+<input class="admin-number" id="newAreaRadiusInput" type="number" min="1" step="1" placeholder="Raggio in metri" />
+<button class="save-btn" onclick="createRadiusArea()">➕ Crea area raggio</button>
+</div>
+
+<div id="polygonCreateBox" style="display:none">
+<div class="draw-help">Disegna da lontano cliccando sulla mappa, oppure cammina e premi “Aggiungi punto GPS”. Servono almeno 3 punti.</div>
+<div class="admin-grid">
+<button class="admin-btn secondary" onclick="addCurrentGpsPoint()">📍 Aggiungi punto GPS</button>
+<button class="admin-btn" onclick="undoPolygonPoint()">↩️ Togli ultimo</button>
+</div>
+<div class="admin-grid" style="margin-top:10px">
+<button class="admin-btn" onclick="resetPolygonPoints()">🗑 Reset punti</button>
+<button class="admin-btn secondary" onclick="createPolygonArea()">💾 Salva perimetro</button>
+</div>
+<div class="point-list" id="polygonPointsList">Nessun punto inserito.</div>
+</div>
+</div>
 </div>
 </div>
 </section>
@@ -355,6 +388,10 @@ let currentAreaName="Area principale";
 let customAreas=[];
 let latestMessageDocs=[];
 let customAreaCircles={};
+let createAreaMode="radius";
+let polygonDraftPoints=[];
+let polygonDraftMarkers=[];
+let polygonDraftLayer=null;
 let latestUserLat=null;
 let latestUserLng=null;
 
@@ -615,11 +652,18 @@ candidates.push({id:"main",name:"Area principale",distance:distance,radius:areaR
 }
 customAreas.forEach(area=>{
 if(area.active!==true)return;
-if(area.type!=="radius")return;
+if(area.type==="radius"){
 if(typeof area.centerLat!=="number" || typeof area.centerLng!=="number" || typeof area.radius!=="number")return;
 const distance=getDistance(lat,lng,area.centerLat,area.centerLng);
 if(distance<=area.radius){
 candidates.push({id:area.id,name:area.name||"Area",distance:distance,radius:area.radius,centerLat:area.centerLat,centerLng:area.centerLng});
+}
+return;
+}
+if(area.type==="polygon" && Array.isArray(area.points) && area.points.length>=3){
+if(isPointInPolygon(lat,lng,area.points)){
+candidates.push({id:area.id,name:area.name||"Area",distance:0,radius:0,centerLat:lat,centerLng:lng});
+}
 }
 });
 candidates.sort((a,b)=>a.distance-b.distance);
@@ -696,6 +740,17 @@ const dLat=(lat2-lat1)*Math.PI/180;
 const dLon=(lon2-lon1)*Math.PI/180;
 const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
 return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function isPointInPolygon(lat,lng,points){
+let insidePoly=false;
+for(let i=0,j=points.length-1;i<points.length;j=i++){
+const xi=points[i].lng, yi=points[i].lat;
+const xj=points[j].lng, yj=points[j].lat;
+const intersect=((yi>lat)!==(yj>lat)) && (lng < (xj-xi)*(lat-yi)/(yj-yi)+xi);
+if(intersect) insidePoly=!insidePoly;
+}
+return insidePoly;
 }
 
 async function updatePresence(){
@@ -870,6 +925,94 @@ document.getElementById("newAreaRadiusInput").value="";
 alert("Area creata");
 };
 
+window.setAreaCreateMode=function(mode){
+createAreaMode=mode;
+const radiusBox=document.getElementById("radiusCreateBox");
+const polygonBox=document.getElementById("polygonCreateBox");
+const radiusBtn=document.getElementById("radiusModeBtn");
+const polygonBtn=document.getElementById("polygonModeBtn");
+if(radiusBox) radiusBox.style.display=mode==="radius"?"block":"none";
+if(polygonBox) polygonBox.style.display=mode==="polygon"?"block":"none";
+if(radiusBtn) radiusBtn.classList.toggle("active",mode==="radius");
+if(polygonBtn) polygonBtn.classList.toggle("active",mode==="polygon");
+if(mode==="polygon"){
+showPage("map");
+setTimeout(()=>{initMap();updateDraftPolygon();},150);
+}
+};
+
+function addPolygonPoint(lat,lng,source){
+if(!isAdmin)return;
+polygonDraftPoints.push({lat:lat,lng:lng});
+updateDraftPolygon();
+}
+
+window.addCurrentGpsPoint=function(){
+if(!isAdmin)return;
+if(latestUserLat===null || latestUserLng===null){alert("Aspetta che il GPS trovi la tua posizione");return;}
+addPolygonPoint(latestUserLat,latestUserLng,"gps");
+};
+
+window.undoPolygonPoint=function(){
+if(!isAdmin)return;
+polygonDraftPoints.pop();
+updateDraftPolygon();
+};
+
+window.resetPolygonPoints=function(){
+if(!isAdmin)return;
+if(polygonDraftPoints.length && !confirm("Cancellare tutti i punti del perimetro?"))return;
+polygonDraftPoints=[];
+updateDraftPolygon();
+};
+
+window.createPolygonArea=async function(){
+if(!isAdmin)return;
+const name=(document.getElementById("newAreaNameInput").value||"").trim();
+if(name.length<2){alert("Scrivi un nome area");return;}
+if(polygonDraftPoints.length<3){alert("Servono almeno 3 punti per creare un perimetro");return;}
+await addDoc(collection(db,"areas"),{
+name:name,
+type:"polygon",
+active:true,
+points:polygonDraftPoints,
+createdAt:Date.now(),
+createdBy:userId
+});
+document.getElementById("newAreaNameInput").value="";
+polygonDraftPoints=[];
+updateDraftPolygon();
+alert("Perimetro creato");
+};
+
+function updateDraftPolygon(){
+const list=document.getElementById("polygonPointsList");
+if(list){
+if(polygonDraftPoints.length===0){
+list.innerHTML="Nessun punto inserito.";
+}else{
+list.innerHTML=polygonDraftPoints.map((p,i)=>`<div>${i+1}. ${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}</div>`).join("");
+}
+}
+if(!map || typeof L==='undefined')return;
+polygonDraftMarkers.forEach(m=>map.removeLayer(m));
+polygonDraftMarkers=[];
+if(polygonDraftLayer){map.removeLayer(polygonDraftLayer);polygonDraftLayer=null;}
+polygonDraftPoints.forEach((p,i)=>{
+const marker=L.circleMarker([p.lat,p.lng],{radius:6,color:'#FCAF58',fillColor:'#FF8C42',fillOpacity:0.9,weight:2}).addTo(map).bindPopup('Punto '+(i+1));
+polygonDraftMarkers.push(marker);
+});
+if(polygonDraftPoints.length>=2){
+const latlngs=polygonDraftPoints.map(p=>[p.lat,p.lng]);
+if(polygonDraftPoints.length>=3){
+polygonDraftLayer=L.polygon(latlngs,{color:'#FCAF58',fillColor:'#FF8C42',fillOpacity:0.18,weight:2,dashArray:'6,6'}).addTo(map).bindPopup('Perimetro in creazione');
+}else{
+polygonDraftLayer=L.polyline(latlngs,{color:'#FCAF58',weight:2,dashArray:'6,6'}).addTo(map);
+}
+}
+}
+
+
 window.toggleAreaActive=async function(areaId,active){
 if(!isAdmin)return;
 await setDoc(doc(db,"areas",areaId),{
@@ -1010,19 +1153,27 @@ if(!isAdmin)return;
 const box=document.getElementById("areasList");
 if(!box)return;
 if(customAreas.length===0){
-box.innerHTML=`<div class="admin-sub">Nessuna area personalizzata creata.</div>`;
+box.innerHTML=`<div class="admin-sub">Nessuna area personalizzata.</div>`;
 return;
 }
 box.innerHTML="";
 customAreas.forEach(area=>{
 const safeName=escapeHtml(area.name||"Area");
 const active=area.active===true;
+let meta="";
+if(area.type==="radius"){
+meta=`Raggio ${area.radius||0}m`;
+}else if(area.type==="polygon"){
+meta=`Perimetro · ${(area.points||[]).length} punti`;
+}else{
+meta="Tipo sconosciuto";
+}
 const row=document.createElement("div");
 row.className="admin-user";
 row.innerHTML=`
 <div class="admin-user-main">
-<div class="admin-user-name">${safeName} ${active?"🟢":"🔴"}</div>
-<div class="admin-user-id">${area.id} · ${area.type||"radius"} · raggio ${area.radius||0}m</div>
+<div class="admin-user-name">${safeName} ${active?"✅":"⛔"}</div>
+<div class="admin-user-id">${meta} · ${area.id}</div>
 </div>
 <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
 <button class="admin-mini-btn ${active?"":"unban"}" onclick="toggleAreaActive('${area.id}',${!active})">${active?"Disattiva":"Attiva"}</button>
@@ -1032,7 +1183,6 @@ row.innerHTML=`
 box.appendChild(row);
 });
 }
-
 function startListeners(){
 if(unsubscribeMessages) unsubscribeMessages();
 if(unsubscribePresence) unsubscribePresence();
@@ -1159,6 +1309,11 @@ function initMap(){
 if(map || typeof L==='undefined') return;
 map=L.map('map',{zoomControl:true});
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+map.on('click',function(e){
+if(isAdmin && createAreaMode==="polygon"){
+addPolygonPoint(e.latlng.lat,e.latlng.lng,"map");
+}
+});
 map.setView([areaCenterLat,areaCenterLng],15);
 updateMap();
 }
@@ -1183,18 +1338,45 @@ delete customAreaCircles[id];
 }
 });
 customAreas.forEach(area=>{
-if(area.type!=="radius" || typeof area.centerLat!=="number" || typeof area.centerLng!=="number" || typeof area.radius!=="number")return;
+const active=area.active===true;
+const color=active?'#22c55e':'#777';
+if(area.type==="radius"){
+if(typeof area.centerLat!=="number" || typeof area.centerLng!=="number" || typeof area.radius!=="number")return;
 const areaCenter=[area.centerLat,area.centerLng];
-const style={radius:area.radius,color:area.active?'#22c55e':'#777',fillColor:area.active?'#22c55e':'#777',fillOpacity:area.active?0.14:0.05,weight:2};
+const style={radius:area.radius,color:color,fillColor:color,fillOpacity:active?0.14:0.05,weight:2};
 if(!customAreaCircles[area.id]){
-customAreaCircles[area.id]=L.circle(areaCenter,style).addTo(map).bindPopup((area.name||'Area')+(area.active?' · attiva':' · disattivata'));
+customAreaCircles[area.id]=L.circle(areaCenter,style).addTo(map);
 }else{
+if(customAreaCircles[area.id].setRadius){
 customAreaCircles[area.id].setLatLng(areaCenter);
 customAreaCircles[area.id].setRadius(area.radius);
 customAreaCircles[area.id].setStyle(style);
-customAreaCircles[area.id].bindPopup((area.name||'Area')+(area.active?' · attiva':' · disattivata'));
+}else{
+map.removeLayer(customAreaCircles[area.id]);
+customAreaCircles[area.id]=L.circle(areaCenter,style).addTo(map);
+}
+}
+customAreaCircles[area.id].bindPopup((area.name||'Area')+' · raggio'+(active?' · attiva':' · disattivata'));
+return;
+}
+if(area.type==="polygon" && Array.isArray(area.points) && area.points.length>=3){
+const latlngs=area.points.map(p=>[p.lat,p.lng]);
+const style={color:color,fillColor:color,fillOpacity:active?0.16:0.05,weight:2};
+if(!customAreaCircles[area.id]){
+customAreaCircles[area.id]=L.polygon(latlngs,style).addTo(map);
+}else{
+if(customAreaCircles[area.id].setLatLngs){
+customAreaCircles[area.id].setLatLngs(latlngs);
+customAreaCircles[area.id].setStyle(style);
+}else{
+map.removeLayer(customAreaCircles[area.id]);
+customAreaCircles[area.id]=L.polygon(latlngs,style).addTo(map);
+}
+}
+customAreaCircles[area.id].bindPopup((area.name||'Area')+' · perimetro'+(active?' · attiva':' · disattivata'));
 }
 });
+updateDraftPolygon();
 
 if(latestUserLat!==null && latestUserLng!==null){
 const pos=[latestUserLat,latestUserLng];
@@ -1203,7 +1385,8 @@ userMarker=L.marker(pos).addTo(map).bindPopup('La tua posizione');
 }else{
 userMarker.setLatLng(pos);
 }
-const layers=[areaCircle,userMarker,...Object.values(customAreaCircles)];
+const layers=[areaCircle,userMarker,...Object.values(customAreaCircles),...polygonDraftMarkers];
+if(polygonDraftLayer) layers.push(polygonDraftLayer);
 const group=L.featureGroup(layers);
 map.fitBounds(group.getBounds().pad(0.25));
 }else{
