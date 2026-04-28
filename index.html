@@ -98,6 +98,9 @@ body.light input{background:rgba(255,255,255,.8)}
 .admin-label{font-size:12px;font-weight:800;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.7px}
 .admin-input{width:100%;min-height:72px;resize:vertical;border:1px solid var(--line);background:rgba(255,255,255,.07);color:var(--text);padding:12px;border-radius:16px;outline:none;font-size:14px;font-family:Inter,Arial,sans-serif}
 .admin-number{width:100%;border:1px solid var(--line);background:rgba(255,255,255,.07);color:var(--text);padding:12px;border-radius:16px;outline:none;font-size:14px;font-family:Inter,Arial,sans-serif}
+.admin-select{width:100%;border:1px solid var(--line);background:rgba(255,255,255,.07);color:var(--text);padding:12px;border-radius:16px;outline:none;font-size:14px;font-family:Inter,Arial,sans-serif}
+body.light .admin-select{background:rgba(255,255,255,.8)}
+
 .admin-status{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4}
 .admin-user-list{display:flex;flex-direction:column;gap:8px;margin-top:10px;max-height:220px;overflow:auto}
 .admin-user{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bubble);border:1px solid var(--line);border-radius:16px;padding:10px}
@@ -277,6 +280,10 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 <button class="admin-btn" onclick="undoPolygonPoint()">↩️ Togli ultimo</button>
 </div>
 <div class="admin-grid" style="margin-top:10px">
+<button class="admin-btn secondary" onclick="addMapCenterPoint()">🎯 Aggiungi centro mappa</button>
+<button class="admin-btn secondary" onclick="enableMapPointMode()">👆 Tocca mappa ON</button>
+</div>
+<div class="admin-grid" style="margin-top:10px">
 <button class="admin-btn secondary" onclick="deleteSelectedPolygonPoint()">🎯 Elimina selezionato</button>
 <button class="admin-btn" onclick="resetPolygonPoints()">🗑 Reset punti</button>
 <button class="admin-btn secondary" onclick="createPolygonArea()">💾 Salva perimetro</button>
@@ -306,6 +313,17 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 <div class="admin-grid">
 <button class="admin-btn" onclick="clearChat()">🧹 Svuota chat</button>
 <button class="admin-btn secondary" onclick="resetPresence()">👥 Reset online</button>
+</div>
+
+<div class="admin-section">
+<div class="admin-label">🧭 Entra in una chat area</div>
+<div class="admin-sub">Come admin puoi leggere e scrivere in qualsiasi area anche se non sei fisicamente lì.</div>
+<select class="admin-select" id="adminAreaSelect" onchange="adminEnterSelectedArea()"></select>
+<div class="admin-grid" style="margin-top:10px">
+<button class="admin-btn secondary" onclick="adminEnterSelectedArea()">🚀 Entra area</button>
+<button class="admin-btn" onclick="adminExitManualArea()">📍 Torna GPS</button>
+</div>
+<div class="admin-status" id="adminAreaSelectStatus">Modalità GPS automatica.</div>
 </div>
 
 <div class="admin-section">
@@ -402,6 +420,9 @@ let areaCenterLng=DEFAULT_CENTER_LNG;
 let areaRadius=DEFAULT_RADIUS;
 let currentAreaId="main";
 let currentAreaName="Area principale";
+let adminManualAreaId=null;
+let adminManualAreaName="";
+let mapPointMode=true;
 let customAreas=[];
 let latestMessageDocs=[];
 let customAreaCircles={};
@@ -693,9 +714,29 @@ return candidates;
 }
 
 function updateCurrentAreaFromPosition(){
+const previousAreaId=currentAreaId;
+
+if(isAdmin && adminManualAreaId){
+const manualArea=getAreaById(adminManualAreaId);
+if(manualArea){
+currentAreaId=manualArea.id;
+currentAreaName=manualArea.name;
+inside=true;
+document.getElementById("distanceText").innerText="ADMIN";
+if(previousAreaId!==currentAreaId){
+firstSnapshot=true;
+renderMessages();
+}
+refreshAdminAreaSelectUI();
+return;
+}else{
+adminManualAreaId=null;
+adminManualAreaName="";
+}
+}
+
 if(latestUserLat===null || latestUserLng===null)return;
 const candidates=getAreaCandidates(latestUserLat,latestUserLng);
-const previousAreaId=currentAreaId;
 if(candidates.length>0){
 const selected=candidates[0];
 currentAreaId=selected.id;
@@ -713,7 +754,81 @@ if(previousAreaId!==currentAreaId){
 firstSnapshot=true;
 renderMessages();
 }
+refreshAdminAreaSelectUI();
 }
+
+function getAreaById(areaId){
+if(areaId==="main"){
+return {id:"main",name:"Area principale",type:"radius",active:areaRadius>0,centerLat:areaCenterLat,centerLng:areaCenterLng,radius:areaRadius};
+}
+return customAreas.find(a=>a.id===areaId)||null;
+}
+
+function refreshAdminAreaSelectUI(){
+if(!isAdmin)return;
+const select=document.getElementById("adminAreaSelect");
+const status=document.getElementById("adminAreaSelectStatus");
+if(!select)return;
+const oldValue=select.value;
+let html=`<option value="">📍 Automatico GPS</option>`;
+html+=`<option value="main">Area principale ${areaRadius>0?"":"(chiusa)"}</option>`;
+customAreas.forEach(area=>{
+const label=(area.name||"Area")+(area.active===true?"":" (disattiva)");
+html+=`<option value="${area.id}">${escapeHtml(label)}</option>`;
+});
+select.innerHTML=html;
+select.value=adminManualAreaId || oldValue || "";
+if(status){
+status.innerText=adminManualAreaId ? `Modalità admin: stai controllando ${adminManualAreaName||currentAreaName}.` : "Modalità GPS automatica.";
+}
+}
+
+window.adminEnterSelectedArea=function(){
+if(!isAdmin)return;
+const select=document.getElementById("adminAreaSelect");
+if(!select)return;
+const areaId=select.value;
+if(!areaId){
+adminExitManualArea();
+return;
+}
+const area=getAreaById(areaId);
+if(!area){alert("Area non trovata");return;}
+const previousAreaId=currentAreaId;
+adminManualAreaId=area.id;
+adminManualAreaName=area.name||"Area";
+currentAreaId=area.id;
+currentAreaName=adminManualAreaName;
+inside=true;
+document.getElementById("distanceText").innerText="ADMIN";
+if(previousAreaId!==currentAreaId){
+firstSnapshot=true;
+renderMessages();
+}
+renderAccessState();
+updatePresence();
+refreshAreaAdminUI();
+refreshAdminAreaSelectUI();
+showPage("chat");
+};
+
+window.adminSelectArea=function(areaId){
+if(!isAdmin)return;
+const select=document.getElementById("adminAreaSelect");
+if(select) select.value=areaId;
+adminEnterSelectedArea();
+};
+
+window.adminExitManualArea=function(){
+if(!isAdmin)return;
+adminManualAreaId=null;
+adminManualAreaName="";
+updateCurrentAreaFromPosition();
+renderAccessState();
+updatePresence();
+refreshAreaAdminUI();
+refreshAdminAreaSelectUI();
+};
 
 function renderAccessState(){
 const title=document.getElementById("chatTitle");
@@ -984,6 +1099,20 @@ if(latestUserLat===null || latestUserLng===null){alert("Aspetta che il GPS trovi
 addPolygonPoint(latestUserLat,latestUserLng,"gps");
 };
 
+window.addMapCenterPoint=function(){
+if(!isAdmin)return;
+if(!map){alert("Apri prima la mappa");return;}
+const center=map.getCenter();
+addPolygonPoint(center.lat,center.lng,"map-center");
+};
+
+window.enableMapPointMode=function(){
+if(!isAdmin)return;
+mapPointMode=true;
+showPage("map");
+alert("Tocca sulla mappa per aggiungere punti al perimetro.");
+};
+
 window.undoPolygonPoint=function(){
 if(!isAdmin)return;
 polygonDraftPoints.pop();
@@ -1102,7 +1231,7 @@ updateDraftPolygon();
 }else{
 updateDraftPolygon();
 }
-},750);
+},1200);
 });
 marker.on('mouseup mouseout touchend dragstart',function(){
 if(longPressTimer) clearTimeout(longPressTimer);
@@ -1263,6 +1392,7 @@ const box=document.getElementById("areasList");
 if(!box)return;
 if(customAreas.length===0){
 box.innerHTML=`<div class="admin-sub">Nessuna area personalizzata.</div>`;
+refreshAdminAreaSelectUI();
 return;
 }
 box.innerHTML="";
@@ -1285,12 +1415,14 @@ row.innerHTML=`
 <div class="admin-user-id">${meta} · ${area.id}</div>
 </div>
 <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+<button class="admin-mini-btn unban" onclick="adminSelectArea('${area.id}')">Entra</button>
 <button class="admin-mini-btn ${active?"":"unban"}" onclick="toggleAreaActive('${area.id}',${!active})">${active?"Disattiva":"Attiva"}</button>
 <button class="admin-mini-btn" onclick="deleteArea('${area.id}')">Elimina</button>
 </div>
 `;
 box.appendChild(row);
 });
+refreshAdminAreaSelectUI();
 }
 function startListeners(){
 if(unsubscribeMessages) unsubscribeMessages();
@@ -1307,9 +1439,11 @@ if(typeof data.areaRadius==="number") areaRadius=data.areaRadius;
 refreshAreaAdminUI();
 updateMap();
 if(latestUserLat!==null && latestUserLng!==null){
-const distance=getDistance(latestUserLat,latestUserLng,areaCenterLat,areaCenterLng);
-inside = distance <= areaRadius;
-document.getElementById("distanceText").innerText=distance.toFixed(2)+" m";
+updateCurrentAreaFromPosition();
+renderAccessState();
+updatePresence();
+}else if(isAdmin && adminManualAreaId){
+updateCurrentAreaFromPosition();
 renderAccessState();
 updatePresence();
 }
@@ -1354,6 +1488,7 @@ const data=d.data();
 customAreas.push({id:d.id,...data});
 });
 renderAreasList();
+refreshAdminAreaSelectUI();
 updateCurrentAreaFromPosition();
 renderAccessState();
 updateMap();
@@ -1421,7 +1556,7 @@ normalTileLayer=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 satelliteTileLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri'});
 map.on('dragstart zoomstart',function(){shouldAutoFitMap=false;});
 map.on('click',function(e){
-if(isAdmin && createAreaMode==="polygon"){
+if(isAdmin && createAreaMode==="polygon" && mapPointMode){
 addPolygonPoint(e.latlng.lat,e.latlng.lng,"map");
 }
 });
@@ -1538,6 +1673,7 @@ return div.innerHTML;
 
 refreshSettingsUI();
 refreshAreaAdminUI();
+refreshAdminAreaSelectUI();
 </script>
 
 <script>
