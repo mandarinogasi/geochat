@@ -141,6 +141,9 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 .point-list{font-size:12px;color:var(--muted);margin-top:8px;max-height:90px;overflow:auto;border:1px solid var(--line);border-radius:14px;padding:8px;background:rgba(0,0,0,.12)}
 .point-list div{padding:3px 0;border-bottom:1px solid rgba(255,255,255,.06)}
 .point-list div:last-child{border-bottom:none}
+.point-list div.selected{color:var(--deep-orange);font-weight:800}
+.draft-point-marker{width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 12px rgba(0,0,0,.45);transform:translate(-9px,-9px)}
+.draft-point-marker.selected{width:24px;height:24px;border:3px solid var(--deep-orange);box-shadow:0 0 18px var(--glow);transform:translate(-12px,-12px)}
 @keyframes scan{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 @keyframes pulse{0%,100%{transform:scale(.96);opacity:.5}50%{transform:scale(1.05);opacity:1}}
 @keyframes pop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
@@ -274,6 +277,7 @@ body.light .bottom-nav{background:rgba(255,255,255,.88)}
 <button class="admin-btn" onclick="undoPolygonPoint()">↩️ Togli ultimo</button>
 </div>
 <div class="admin-grid" style="margin-top:10px">
+<button class="admin-btn secondary" onclick="deleteSelectedPolygonPoint()">🎯 Elimina selezionato</button>
 <button class="admin-btn" onclick="resetPolygonPoints()">🗑 Reset punti</button>
 <button class="admin-btn secondary" onclick="createPolygonArea()">💾 Salva perimetro</button>
 </div>
@@ -405,6 +409,7 @@ let createAreaMode="radius";
 let polygonDraftPoints=[];
 let polygonDraftMarkers=[];
 let polygonDraftLayer=null;
+let selectedPolygonPointIndex=null;
 let latestUserLat=null;
 let latestUserLng=null;
 
@@ -968,6 +973,8 @@ setTimeout(()=>{initMap();updateDraftPolygon();},150);
 function addPolygonPoint(lat,lng,source){
 if(!isAdmin)return;
 polygonDraftPoints.push({lat:lat,lng:lng});
+selectedPolygonPointIndex=polygonDraftPoints.length-1;
+shouldAutoFitMap=false;
 updateDraftPolygon();
 }
 
@@ -987,8 +994,35 @@ window.resetPolygonPoints=function(){
 if(!isAdmin)return;
 if(polygonDraftPoints.length && !confirm("Cancellare tutti i punti del perimetro?"))return;
 polygonDraftPoints=[];
+selectedPolygonPointIndex=null;
 updateDraftPolygon();
 };
+
+window.deleteSelectedPolygonPoint=function(){
+if(!isAdmin)return;
+if(selectedPolygonPointIndex===null || selectedPolygonPointIndex<0 || selectedPolygonPointIndex>=polygonDraftPoints.length){
+alert("Seleziona prima un punto del perimetro");
+return;
+}
+polygonDraftPoints.splice(selectedPolygonPointIndex,1);
+selectedPolygonPointIndex=null;
+updateDraftPolygon();
+};
+
+function selectPolygonPoint(index){
+selectedPolygonPointIndex=index;
+updateDraftPolygon();
+}
+window.selectPolygonPoint=selectPolygonPoint;
+
+function makeDraftPointIcon(color,selected){
+return L.divIcon({
+className:"",
+html:`<div class="draft-point-marker ${selected?"selected":""}" style="background:${color}"></div>`,
+iconSize:selected?[24,24]:[18,18],
+iconAnchor:selected?[12,12]:[9,9]
+});
+}
 
 window.createPolygonArea=async function(){
 if(!isAdmin)return;
@@ -1007,6 +1041,7 @@ createdBy:userId
 });
 document.getElementById("newAreaNameInput").value="";
 polygonDraftPoints=[];
+selectedPolygonPointIndex=null;
 updateDraftPolygon();
 alert("Perimetro creato");
 };
@@ -1017,7 +1052,7 @@ if(list){
 if(polygonDraftPoints.length===0){
 list.innerHTML="Nessun punto inserito.";
 }else{
-list.innerHTML=polygonDraftPoints.map((p,i)=>`<div>${i+1}. ${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}</div>`).join("");
+list.innerHTML=polygonDraftPoints.map((p,i)=>`<div class="${selectedPolygonPointIndex===i?"selected":""}" onclick="selectPolygonPoint(${i})">${i+1}. ${p.lat.toFixed(6)}, ${p.lng.toFixed(6)} ${selectedPolygonPointIndex===i?" · selezionato":""}</div>`).join("");
 }
 }
 if(!map || typeof L==='undefined')return;
@@ -1026,7 +1061,52 @@ polygonDraftMarkers=[];
 if(polygonDraftLayer){map.removeLayer(polygonDraftLayer);polygonDraftLayer=null;}
 polygonDraftPoints.forEach((p,i)=>{
 const draftColor=getNewAreaColor();
-const marker=L.circleMarker([p.lat,p.lng],{radius:6,color:draftColor,fillColor:draftColor,fillOpacity:0.9,weight:2}).addTo(map).bindPopup('Punto '+(i+1));
+const marker=L.marker([p.lat,p.lng],{
+draggable:true,
+icon:makeDraftPointIcon(draftColor,selectedPolygonPointIndex===i),
+zIndexOffset:selectedPolygonPointIndex===i?1000:500
+}).addTo(map).bindPopup('Punto '+(i+1)+' · trascina per spostare');
+let longPressTimer=null;
+marker.on('click',function(e){
+if(e && e.originalEvent) L.DomEvent.stopPropagation(e.originalEvent);
+selectPolygonPoint(i);
+});
+marker.on('dragstart',function(){
+shouldAutoFitMap=false;
+selectedPolygonPointIndex=i;
+if(longPressTimer) clearTimeout(longPressTimer);
+});
+marker.on('dragend',function(){
+const pos=marker.getLatLng();
+polygonDraftPoints[i]={lat:pos.lat,lng:pos.lng};
+selectedPolygonPointIndex=i;
+updateDraftPolygon();
+});
+marker.on('contextmenu',function(e){
+if(e && e.originalEvent) L.DomEvent.stopPropagation(e.originalEvent);
+selectedPolygonPointIndex=i;
+if(confirm('Eliminare il punto '+(i+1)+'?')){
+polygonDraftPoints.splice(i,1);
+selectedPolygonPointIndex=null;
+updateDraftPolygon();
+}
+});
+marker.on('mousedown touchstart',function(){
+if(longPressTimer) clearTimeout(longPressTimer);
+longPressTimer=setTimeout(()=>{
+selectedPolygonPointIndex=i;
+if(confirm('Eliminare il punto '+(i+1)+'?')){
+polygonDraftPoints.splice(i,1);
+selectedPolygonPointIndex=null;
+updateDraftPolygon();
+}else{
+updateDraftPolygon();
+}
+},750);
+});
+marker.on('mouseup mouseout touchend dragstart',function(){
+if(longPressTimer) clearTimeout(longPressTimer);
+});
 polygonDraftMarkers.push(marker);
 });
 if(polygonDraftPoints.length>=2){
